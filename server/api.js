@@ -3,6 +3,8 @@
 const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser')
+const Web3 = require('web3');
+const web3 = new Web3();
 
 const development = process.env.NODE_ENV !== 'production';
 
