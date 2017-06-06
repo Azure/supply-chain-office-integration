@@ -4,7 +4,7 @@
   <Version>1.0.0.0</Version>
   <ProviderName>[Provider name]</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Stampery for Outlook"/>
+  <DisplayName DefaultValue="Ibera for Outlook"/>
   <Description DefaultValue="Certify any email by leveraging the power of the blockchain."/>
   <IconUrl DefaultValue="https://localhost:8443/images/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:8443/images/hi-res-icon.png"/>
@@ -88,7 +88,7 @@
         <bt:Url id="functionFile" DefaultValue="https://localhost:8443/FunctionFile/Functions.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="Stampery"/>
+        <bt:String id="groupLabel" DefaultValue="Ibera"/>
 
         <bt:String id="funcStampButtonLabel" DefaultValue="Certify" />
         <bt:String id="funcStampSuperTipTitle" DefaultValue="Certify" />
@@ -97,8 +97,8 @@
         <bt:String id="funcProveSuperTipTitle" DefaultValue="Verify" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="funcStampSuperTipDescription" DefaultValue="Certify this email using Stampery" />
-        <bt:String id="funcProveSuperTipDescription" DefaultValue="Verify the validaty of the Stampery proof for this document" />
+        <bt:String id="funcStampSuperTipDescription" DefaultValue="Certify this email using Ibera" />
+        <bt:String id="funcProveSuperTipDescription" DefaultValue="Verify the validaty of the Ibera proof for this document" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

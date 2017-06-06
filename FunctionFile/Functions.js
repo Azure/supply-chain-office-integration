@@ -112,7 +112,7 @@ function merkleMixer(hashes) {
 }
 
 function showMessage(message, event) {
-  Office.context.mailbox.item.notificationMessages.replaceAsync('stampery-notifications-id', {
+  Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
     type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
     icon: 'icon-16',
     message: message,

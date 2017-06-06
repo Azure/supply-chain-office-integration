@@ -19,7 +19,7 @@ To install dependencies:
 $ npm install
 ```
 
-Before running the server, set the environment variable STAMPERY_TOKEN that you can acquire from https://api-dashboard.stampery.com/.
+Before running the server, set the environment variable STAMPERY_TOKEN that you can acquire from https://api-dashboard.ibera.com/.
 
 To start the server:
 
@@ -40,7 +40,7 @@ $ curl https://localhost:8443/api/ping
 Run the gulp dist task and provide the URL behind which you are deploying, for example:
 
 ```
-$ gulp dist --url https://stampery-web-app.azurewebsites.net/
+$ gulp dist --url https://ibera-web-app.azurewebsites.net/
 ```
 
 Above command rewrites the manifest to point to the correct resources.
@@ -54,5 +54,5 @@ $ npm install --production
 $ git init .
 $ git add *
 $ git commit -m "Deployment"
-$ git push https://stampery-web-app.scm.azurewebsites.net:443/stampery-web-app.git master
+$ git push https://ibera-web-app.scm.azurewebsites.net:443/ibera-web-app.git master
 ```
