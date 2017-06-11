@@ -5,19 +5,63 @@
 Office.initialize = function () {
 };
 
-// Buffer-handling library shorthand
-Buffer = buffer.Buffer;
+// Get the body type of the composed item, and set data in 
+// in the appropriate data type in the item body.
+function setItemBody(text) {
+    Office.context.mailbox.item.body.getTypeAsync(
+        function (result) {
+            if (result.status == Office.AsyncResultStatus.Failed){
+                write(result.error.message);
+            }
+            else {
+                // Successfully got the type of item body.
+                // Set data of the appropriate type in body.
+                if (result.value == Office.MailboxEnums.BodyType.Html) {
+                    // Body is of HTML type.
+                    // Specify HTML in the coercionType parameter
+                    // of setSelectedDataAsync.
+                    Office.context.mailbox.item.body.prependAsync(
+                        text,
+                        { coercionType: Office.CoercionType.Html, 
+                        asyncContext: { var3: 1, var4: 2 } },
+                        function (asyncResult) {
+                            if (asyncResult.status == 
+                                Office.AsyncResultStatus.Failed){
+                                write(asyncResult.error.message);
+                            }
+                            else {
+                                // Successfully set data in item body.
+                                // Do whatever appropriate for your scenario,
+                                // using the arguments var3 and var4 as applicable.
+                            }
+                        });
+                }
+                else {
+                    // Body is of text type. 
+                    Office.context.mailbox.item.body.prependAsync(
+                        text,
+                        { coercionType: Office.CoercionType.Text, 
+                            asyncContext: { var3: 1, var4: 2 } },
+                        function (asyncResult) {
+                            if (asyncResult.status == 
+                                Office.AsyncResultStatus.Failed){
+                                write(asyncResult.error.message);
+                            }
+                            else {
+                                // Successfully set data in item body.
+                                // Do whatever appropriate for your scenario,
+                                // using the arguments var3 and var4 as applicable.
+                            }
+                         });
+                }
+            }
+        });
 
-function hashMail(item, callback) {
-  Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
-    if (result.status === Office.AsyncResultStatus.Failed) {
-      showMessage(result.error);
-      return;
-    }
-    var body = result.value;
-    var hash = sha256(body);
-    callback(hash.toUpperCase());
-  });
+}
+
+// Writes to a div with id='message' on the page.
+function write(message){
+    document.getElementById('message').innerText += message; 
 }
 
 function handleRequest(xhr, body, callback) {
@@ -40,84 +84,71 @@ function handleRequest(xhr, body, callback) {
   xhr.send(body && JSON.stringify(body) || null);
 }
 
-function postHash(hash, callback) {
+function getKey(keyId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/stamp');
+  xhr.open('GET', '/api/key?key_id='+keyId);
   xhr.setRequestHeader('Content-Type', 'application/json');
-  handleRequest(xhr, hash, callback);
-}
-
-function getProof(hash, callback) {
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/proofs/' + hash);
   handleRequest(xhr, null, callback);
 }
 
-function stamp(event) {
-  hashMail(Office.context.mailbox.item, function (hash) {
-    postHash({ hash: hash }, function (response) {
-      if (response.error) {
-        showMessage(response.error, event);
-      } else {
-        showMessage('Successfully stamped', event);
-      }
-    });
-  });
+function getProof(trackingId, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/proof?tracking_id=' + trackingId);
+  handleRequest(xhr, null, callback);
 }
 
-function prove(event) {
-  hashMail(Office.context.mailbox.item, function (hash) {
-    getProof(hash, function (response) {
-      if (response.error || !response.result) {
-        return showMessage(response.error, event);
-      }
-      var receipts = response.result.receipts;
-      var receipt = [receipts.btc, receipts.eth].find(function (receipt) {
-        return typeof receipt != 'number';
-      });
-      if (receipt) {
-        var hash = new Buffer(receipt.targetHash, 'hex');
-        var validity = checkSiblings(hash, receipt.proof, receipt.merkleRoot);
-        var anchor = receipt.anchors[0];
-        var chain = {'ETHData': 'Ethereum', 'BTCOpReturn': 'Bitcoin'}[anchor.type];
-        var date = new Date(response.result.time);
-        showMessage('The ' + chain + ' blockchain attested the content of this email as of ' + date, event);
-      } else {
-        showMessage('Still working on it.. (' + receipts.eth + ' seconds left)', event);
-      }
-    });
-  });
+function requestKeys(event) {
+	var keyId;
+	getKey(keyId, function (response) {
+		if (response.error) {
+			showMessage(response.error, event);
+		} else {
+			Office.context.mailbox.item.setSelectedDataAsync("Hello World!");
+		}
+	});
 }
 
-function checkSiblings(hash, siblings, root) {
-  if (siblings.length > 0) {
-    var head = siblings[0];
-    var tail = siblings.slice(1);
-    var hashes = [hash, head.right];
-    if ('left' in head)
-      hashes = [head.left, hash];
-    var hash = merkleMixer(hashes);
-    return checkSiblings(hash, tail, root);
-  } else {
-    var root = new Buffer(root, 'hex');
-    return root.equals(hash);
-  }
-}
-
-function merkleMixer(hashes) {
-  var buf = Buffer.concat(hashes.map(function (h) {
-    return Buffer(h, 'hex');
-  }));
-  return new Buffer(sha256(buf), 'hex');
+function provideKeys(event) {
+	// if (Office.context.mailbox.item.subject == "ibera key request")
+	{
+		showMessage("start", event);
+		Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
+			if (result.status === Office.AsyncResultStatus.Failed) {
+				showMessage(result.error, event);
+				return;
+			}
+			var body = result.value;
+			showMessage(body, event);
+			getProof(body, function (response) {
+				if (response.error || !response.result) {
+					return showMessage(response.error, event);
+				}
+				var keyId = response.result[0].tracking_id;
+				showMessage("retrieve key with id: " + keyId, event);
+				getKey(keyId, function (response) {
+					if (response.error || !response.result) {
+						return showMessage(response.error, event);
+					}
+					try{
+						setItemBody(JSON.stringify(response.result));
+						showMessage("key written");
+					}
+					catch (ex){
+						showMessage(ex.message, event);
+					}
+				});
+			});
+		});
+	}
 }
 
 function showMessage(message, event) {
-  Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
-    type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
-    icon: 'icon-16',
-    message: message,
-    persistent: false
-  }, function (result) {
+	Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
+		type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
+		icon: 'icon-16',
+		message: message,
+		persistent: false
+	}, function (result) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       showMessage('Error when showing a notification', event);
     }

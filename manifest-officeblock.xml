@@ -5,7 +5,7 @@
   <ProviderName>[Provider name]</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Ibera for Outlook"/>
-  <Description DefaultValue="Certify any email by leveraging the power of the blockchain."/>
+  <Description DefaultValue="Open and transparent supply chain by leveraging the power of the blockchain."/>
   <IconUrl DefaultValue="https://localhost:8443/images/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:8443/images/hi-res-icon.png"/>
   <Hosts>
@@ -38,15 +38,15 @@
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
           <FunctionFile resid="functionFile"/>
-          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+          <ExtensionPoint xsi:type="MessageComposeCommandSurface">
             <OfficeTab id="TabDefault">
-              <Group id="msgReadCmdGroup">
+              <Group id="msComposeCmdGroup">
                 <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="stampFunctionButton">
-                  <Label resid="funcStampButtonLabel" />
+                <Control xsi:type="Button" id="requestKeysFunctionButton">
+                  <Label resid="funcRequestKeysButtonLabel" />
                   <Supertip>
-                    <Title resid="funcStampSuperTipTitle" />
-                    <Description resid="funcStampSuperTipDescription" />
+                    <Title resid="funcReqKeysSuperTipTitle" />
+                    <Description resid="funcReqKeysSuperTipDescription" />
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="icon-16" />
@@ -54,14 +54,14 @@
                     <bt:Image size="80" resid="icon-80" />
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
-                    <FunctionName>stamp</FunctionName>
+                    <FunctionName>requestKeys</FunctionName>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="proveFunctionButton">
-                  <Label resid="funcProveButtonLabel" />
+                <Control xsi:type="Button" id="provideKeysFunctionButton">
+                  <Label resid="funcProvideKeysButtonLabel" />
                   <Supertip>
-                    <Title resid="funcProveSuperTipTitle" />
-                    <Description resid="funcProveSuperTipDescription" />
+                    <Title resid="funcProvideKeysSuperTipTitle" />
+                    <Description resid="funcProvKeysSuperTipDescription" />
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="icon-16" />
@@ -69,7 +69,7 @@
                     <bt:Image size="80" resid="icon-80" />
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
-                    <FunctionName>prove</FunctionName>
+                    <FunctionName>provideKeys</FunctionName>
                   </Action>
                 </Control>
               </Group>
@@ -90,15 +90,15 @@
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Ibera"/>
 
-        <bt:String id="funcStampButtonLabel" DefaultValue="Certify" />
-        <bt:String id="funcStampSuperTipTitle" DefaultValue="Certify" />
+        <bt:String id="funcRequestKeysButtonLabel" DefaultValue="Request Keys" />
+        <bt:String id="funcReqKeysSuperTipTitle" DefaultValue="Request Keys" />
 
-        <bt:String id="funcProveButtonLabel" DefaultValue="Verify" />
-        <bt:String id="funcProveSuperTipTitle" DefaultValue="Verify" />
+        <bt:String id="funcProvideKeysButtonLabel" DefaultValue="Provide Keys" />
+        <bt:String id="funcProvideKeysSuperTipTitle" DefaultValue="Provide Keys" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="funcStampSuperTipDescription" DefaultValue="Certify this email using Ibera" />
-        <bt:String id="funcProveSuperTipDescription" DefaultValue="Verify the validaty of the Ibera proof for this document" />
+        <bt:String id="funcReqKeysSuperTipDescription" DefaultValue="Request keys using Ibera service" />
+        <bt:String id="funcProvKeysSuperTipDescription" DefaultValue="Provide keys using Ibera service" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
