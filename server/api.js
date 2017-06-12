@@ -41,7 +41,7 @@ router.post('/proof', function (req, res) {
             "encrypted_proof" : "YmFzZTY0IGRlY29kZXI=",
             "public_proof" :  "{producer_id:farmer2, email:test@farmer2.de}"
         }, function(result){
-             res.send({result: result, error: null});
+             res.send({result: result, error: result.error});
         });
     }
     catch (ex){
@@ -51,10 +51,10 @@ router.post('/proof', function (req, res) {
 router.get('/proof', function (req, res) {
     try {
         var xhr = new XMLHttpRequest();
-        xhr.open('GET', iberaServicesEndpoint + "/api/proof?tracking_id=" + req.query.tracking_id);
+        xhr.open('GET', iberaServicesEndpoint + "/api/proof?decrypt=true&tracking_id=" + req.query.tracking_id);
         xhr.setRequestHeader('Content-Type', 'application/json');
         handleRequest(xhr, {}, function(result){
-            res.send({result: result, error: null});
+            res.send({result: result, error: result.error});
         });
     }
     catch (ex){
@@ -67,7 +67,7 @@ router.get('/key', function (req, res) {
         xhr.open('GET', iberaServicesEndpoint + "/api/key?key_id=" + req.query.key_id);
         xhr.setRequestHeader('Content-Type', 'application/json');
         handleRequest(xhr, {}, function(result){
-            res.send({result: result, error: null});
+            res.send({result: result, error: result.error});
         });
     }
     catch (ex){

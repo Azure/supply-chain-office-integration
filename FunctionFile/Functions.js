@@ -5,65 +5,8 @@
 Office.initialize = function () {
 };
 
-// Get the body type of the composed item, and set data in 
-// in the appropriate data type in the item body.
-function setItemBody(text) {
-    Office.context.mailbox.item.body.getTypeAsync(
-        function (result) {
-            if (result.status == Office.AsyncResultStatus.Failed){
-                write(result.error.message);
-            }
-            else {
-                // Successfully got the type of item body.
-                // Set data of the appropriate type in body.
-                if (result.value == Office.MailboxEnums.BodyType.Html) {
-                    // Body is of HTML type.
-                    // Specify HTML in the coercionType parameter
-                    // of setSelectedDataAsync.
-                    Office.context.mailbox.item.body.prependAsync(
-                        text,
-                        { coercionType: Office.CoercionType.Html, 
-                        asyncContext: { var3: 1, var4: 2 } },
-                        function (asyncResult) {
-                            if (asyncResult.status == 
-                                Office.AsyncResultStatus.Failed){
-                                write(asyncResult.error.message);
-                            }
-                            else {
-                                // Successfully set data in item body.
-                                // Do whatever appropriate for your scenario,
-                                // using the arguments var3 and var4 as applicable.
-                            }
-                        });
-                }
-                else {
-                    // Body is of text type. 
-                    Office.context.mailbox.item.body.prependAsync(
-                        text,
-                        { coercionType: Office.CoercionType.Text, 
-                            asyncContext: { var3: 1, var4: 2 } },
-                        function (asyncResult) {
-                            if (asyncResult.status == 
-                                Office.AsyncResultStatus.Failed){
-                                write(asyncResult.error.message);
-                            }
-                            else {
-                                // Successfully set data in item body.
-                                // Do whatever appropriate for your scenario,
-                                // using the arguments var3 and var4 as applicable.
-                            }
-                         });
-                }
-            }
-        });
-
-}
-
-// Writes to a div with id='message' on the page.
-function write(message){
-    document.getElementById('message').innerText += message; 
-}
-
+const beginProofString = "-----BEGIN PROOF-----";
+const endProofString = "-----END PROOF-----";
 function handleRequest(xhr, body, callback) {
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
@@ -97,46 +40,66 @@ function getProof(trackingId, callback) {
   handleRequest(xhr, null, callback);
 }
 
-function requestKeys(event) {
-	var keyId;
-	getKey(keyId, function (response) {
-		if (response.error) {
-			showMessage(response.error, event);
-		} else {
-			Office.context.mailbox.item.setSelectedDataAsync("Hello World!");
-		}
-	});
-}
-
-function provideKeys(event) {
-	// if (Office.context.mailbox.item.subject == "ibera key request")
-	{
-		showMessage("start", event);
+function validateProof(event) {
 		Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
 			if (result.status === Office.AsyncResultStatus.Failed) {
-				showMessage(result.error, event);
-				return;
+				return showMessage(result.error, event);
 			}
+      try {
+        var body = result.value;
+        if ((body.search(beginProofString) != -1) && (body.search(endProofString) != -1) ){
+          var proofs = body.split(beginProofString);
+          for (var i in proofs) {
+            if (proofs[i].search(endProofString) != -1) {
+              var proof = proofs[i].split(endProofString);
+              if (proof.length >= 1) {
+                var jsonProof = JSON.parse(proof[0]);
+                getProof(jsonProof[0].tracking_id, function(fromChain){
+                  if (fromChain.error || !fromChain.result) {
+                    return showMessage("error retrieving the proof from blockchain for validation - tracking_id: " + jsonProof[0].trackingId, event); 
+                  }   
+                  var proofFromChain = fromChain.result[0];
+                  if (proofFromChain.public_proof.encrypted_proof_hash == sha256(jsonProof[0].encrypted_proof)){
+                    return showMessage("Valid proof for tracking_id: " + jsonProof[0].tracking_id, event);  
+                  }
+                  else {
+                    return showMessage("NOT valid proof for tracking_id: " + jsonProof[0].tracking_id, event);               
+                  }
+                });
+              }
+              else {
+                  return showMessage("Unable to validate proof(s)", event); 
+              }
+            }
+          }
+        }
+        else {
+            return showMessage("No proofs to validate found in email", event); 
+        }
+      }
+      catch(ex){
+          return showMessage(ex.message, event);       
+      }
+    });
+}
+
+function provideProof(event) {
+	// if (Office.context.mailbox.item.subject == "ibera key request")
+	{
+		Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
+			if (result.status === Office.AsyncResultStatus.Failed) {
+				return showMessage(result.error, event);
+			}
+
 			var body = result.value;
-			showMessage(body, event);
-			getProof(body, function (response) {
+      var trackingId = body;
+			getProof(trackingId, function (response) {
 				if (response.error || !response.result) {
 					return showMessage(response.error, event);
 				}
-				var keyId = response.result[0].tracking_id;
-				showMessage("retrieve key with id: " + keyId, event);
-				getKey(keyId, function (response) {
-					if (response.error || !response.result) {
-						return showMessage(response.error, event);
-					}
-					try{
-						setItemBody(JSON.stringify(response.result));
-						showMessage("key written");
-					}
-					catch (ex){
-						showMessage(ex.message, event);
-					}
-				});
+        var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(response.result, null, 2) + endProofString;
+        Office.context.mailbox.item.displayReplyForm(replyText);
+        showMessage("Proof have been added for: " + trackingId, event);
 			});
 		});
 	}

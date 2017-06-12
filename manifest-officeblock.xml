@@ -38,15 +38,21 @@
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
           <FunctionFile resid="functionFile"/>
+          <!--
           <ExtensionPoint xsi:type="MessageComposeCommandSurface">
+          -->
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">          
             <OfficeTab id="TabDefault">
+              <!--
               <Group id="msComposeCmdGroup">
+              -->
+              <Group id="msReadCmdGroup">
                 <Label resid="groupLabel"/>
-                <Control xsi:type="Button" id="requestKeysFunctionButton">
-                  <Label resid="funcRequestKeysButtonLabel" />
+                <Control xsi:type="Button" id="validateProofFunctionButton">
+                  <Label resid="funcValidateProofButtonLabel" />
                   <Supertip>
-                    <Title resid="funcReqKeysSuperTipTitle" />
-                    <Description resid="funcReqKeysSuperTipDescription" />
+                    <Title resid="funcValidatePSuperTipTitle" />
+                    <Description resid="funcValidPSuperTipDescription" />
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="icon-16" />
@@ -54,14 +60,14 @@
                     <bt:Image size="80" resid="icon-80" />
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
-                    <FunctionName>requestKeys</FunctionName>
+                    <FunctionName>validateProof</FunctionName>
                   </Action>
                 </Control>
-                <Control xsi:type="Button" id="provideKeysFunctionButton">
-                  <Label resid="funcProvideKeysButtonLabel" />
+                <Control xsi:type="Button" id="provideProofFunctionButton">
+                  <Label resid="funcProvideProofButtonLabel" />
                   <Supertip>
-                    <Title resid="funcProvideKeysSuperTipTitle" />
-                    <Description resid="funcProvKeysSuperTipDescription" />
+                    <Title resid="funcProvidePSuperTipTitle" />
+                    <Description resid="funcProvPSuperTipDescription" />
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="icon-16" />
@@ -69,7 +75,7 @@
                     <bt:Image size="80" resid="icon-80" />
                   </Icon>
                   <Action xsi:type="ExecuteFunction">
-                    <FunctionName>provideKeys</FunctionName>
+                    <FunctionName>provideProof</FunctionName>
                   </Action>
                 </Control>
               </Group>
@@ -90,15 +96,15 @@
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Ibera"/>
 
-        <bt:String id="funcRequestKeysButtonLabel" DefaultValue="Request Keys" />
-        <bt:String id="funcReqKeysSuperTipTitle" DefaultValue="Request Keys" />
+        <bt:String id="funcValidateProofButtonLabel" DefaultValue="Validate Proof" />
+        <bt:String id="funcValidatePSuperTipTitle" DefaultValue="Validate Proof" />
 
-        <bt:String id="funcProvideKeysButtonLabel" DefaultValue="Provide Keys" />
-        <bt:String id="funcProvideKeysSuperTipTitle" DefaultValue="Provide Keys" />
+        <bt:String id="funcProvideProofButtonLabel" DefaultValue="Provide Proof" />
+        <bt:String id="funcProvidePSuperTipTitle" DefaultValue="Provide Proof" />
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="funcReqKeysSuperTipDescription" DefaultValue="Request keys using Ibera service" />
-        <bt:String id="funcProvKeysSuperTipDescription" DefaultValue="Provide keys using Ibera service" />
+        <bt:String id="funcValidPSuperTipDescription" DefaultValue="Validate proof using Ibera service" />
+        <bt:String id="funcProvPSuperTipDescription" DefaultValue="Provide proof using Ibera service" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
