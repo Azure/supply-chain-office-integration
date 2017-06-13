@@ -23,7 +23,6 @@
   "dependencies": {
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
-    "stampery": "^6.0.0",
     "web3": "^0.19.0",
     "xmlhttprequest": "^1.8.0"
   },

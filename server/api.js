@@ -36,11 +36,7 @@ router.post('/proof', function (req, res) {
         var xhr = new XMLHttpRequest();
         xhr.open('POST', iberaServicesEndpoint + "/api/proof");
         xhr.setRequestHeader('Content-Type', 'application/json');
-        handleRequest(xhr, {
-            "tracking_id" : "tracking_id_10",
-            "encrypted_proof" : "YmFzZTY0IGRlY29kZXI=",
-            "public_proof" :  "{producer_id:farmer2, email:test@farmer2.de}"
-        }, function(result){
+        handleRequest(xhr, req.body, function(result){
              res.send({result: result, error: result.error});
         });
     }

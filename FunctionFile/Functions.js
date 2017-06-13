@@ -5,6 +5,12 @@
 Office.initialize = function () {
 };
 
+// TODO:  the following config values need to be set on asettings page
+var config = {
+  user_id : "FarmerID100"
+};
+
+const containerName = "attachments";
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
@@ -28,81 +34,96 @@ function handleRequest(xhr, body, callback) {
   xhr.send(body && JSON.stringify(body) || null);
 }
 
+function postProof(body, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', '/api/proof');
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  handleRequest(xhr, body, callback);
+}
+
 function getKey(keyId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/key?key_id='+keyId);
+  xhr.open('GET', '/api/key?key_id='+ encodeURIComponent(keyId));
   xhr.setRequestHeader('Content-Type', 'application/json');
   handleRequest(xhr, null, callback);
 }
 
 function getProof(trackingId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/proof?tracking_id=' + trackingId);
+  xhr.open('GET', '/api/proof?tracking_id=' + encodeURIComponent(trackingId));
   handleRequest(xhr, null, callback);
 }
 
-
-
-function storeAttachments(event){
-
+function storeAttachments(event) {
   if (Office.context.mailbox.item.attachments == undefined) {
-    var testButton = document.getElementById("testButton");
-      testButton.onclick = "";
-      showMessage("Not supported: Attachments are not supported by your Exchange server.", event);
+      return showMessage("Not supported: Attachments are not supported by your Exchange server.", event);
   } else if (Office.context.mailbox.item.attachments.length == 0) {
-      var testButton = document.getElementById("testButton");
-      testButton.onclick = "";
-      showMessage("No attachments: There are no attachments on this item.", event);
-  } else {
-    var serviceRequest = new Object();
-    serviceRequest.attachmentToken = "";
-    serviceRequest.ewsUrl = Office.context.mailbox.ewsUrl;
-    serviceRequest.attachments = new Array();
-    serviceRequest.containerName = "attachments";
-    serviceRequest.folderName = "username";
+      return showMessage("No attachments: There are no attachments on this item.", event);
   }
-  showMessage("Start", event);
+  var serviceRequest = {};
+  serviceRequest.attachmentToken = "";
+  serviceRequest.ewsUrl = Office.context.mailbox.ewsUrl;
+  serviceRequest.attachments = [];
+  serviceRequest.containerName = containerName;
+  serviceRequest.folderName = config.user_id;
 
-  Office.context.mailbox.getCallbackTokenAsync(attachmentTokenCallback);
-}
-
-function attachmentTokenCallback(asyncResult, userContext) {
+  Office.context.mailbox.getCallbackTokenAsync( function attachmentTokenCallback(asyncResult, userContext) {
     if (asyncResult.status == "succeeded") {
         serviceRequest.attachmentToken = asyncResult.value;
-        makeServiceRequest();
+        var attachment;
+        xhr = new XMLHttpRequest();
+        // xhr.open("POST", "https://localhost:44320/api/Attachment", true);
+        xhr.open("POST", "https://ibera-document-service.azurewebsites.net/api/Attachment", true);
+        xhr.setRequestHeader("Content-Type", "application/json"); //; charset=utf-8");
+
+        // Translate the attachment details into a form easily understood by WCF.
+        for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
+            attachment = Office.context.mailbox.item.attachments[i];
+            attachment = attachment._data$p$0 || attachment.$0_0;
+
+            if (attachment !== undefined) {
+                serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
+            }
+        }
+        handleRequest(xhr, serviceRequest, function(response){
+          if (response.error){
+            return showMessage("Error: " + response.error, event);           
+          }
+          var trackingIds = [];
+          if (response.attachmentProcessingDetails)
+          {
+            for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
+              var ad = response.attachmentProcessingDetails[a];
+              var trackingId = "document_id2_" + ad.hash; // encodeURIComponent(ad.hash);
+              showMessage(trackingId, event);
+              trackingIds.push(encodeURIComponent(trackingId));
+              var proof = {
+                  tracking_id : trackingId,
+                  proof_to_encrypt : {
+                    url : ad.url,
+                    sas_token : ad.sasToken,
+                    document_name : ad.name
+                  },
+                  public_proof : {
+                      document_hash : ad.hash,
+                      creator_id : config.user_id
+                  }
+              }; 
+              postProof(proof, function(response){
+                if (response.error || !response.result) {
+                  return showMessage(response.error, event);
+                }
+              });
+            }
+          }
+          Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+          return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
+        });
     }
     else {
-        showMessage("Could not get callback token: " + asyncResult.error.message);
+        return showMessage("Could not get callback token: " + asyncResult.error.message, event);
     }
-}
-
-function makeServiceRequest() {
-    showMessage("makeServiceRequest");
-    var attachment;
-    xhr = new XMLHttpRequest();
-
-    // Update the URL to point to your service location.
-    // xhr.open("POST", "https://localhost:44320/api/Attachment", true);
-    xhr.open("POST", "https://ibera-document-service/api/Attachment", true);
-   
-
-    xhr.setRequestHeader("Content-Type", "application/json; charset=utf-8");
-
-    // Translate the attachment details into a form easily understood by WCF.
-    for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
-        attachment = Office.context.mailbox.item.attachments[i];
-        attachment = attachment._data$p$0 || attachment.$0_0;
-
-        if (attachment !== undefined) {
-            serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
-        }
-    }
-    handleRequest(xhr, serviceRequest, showResponse);
-};
-
-// Shows the service response.
-function showResponse(response) {
-    showMessage("Attachments processed: " + response.attachmentsProcessed);
+  });
 }
 
 function validateProof(event) {
