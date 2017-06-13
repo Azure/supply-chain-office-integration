@@ -78,6 +78,21 @@
                     <FunctionName>provideProof</FunctionName>
                   </Action>
                 </Control>
+                <Control xsi:type="Button" id="storeDocFunctionButton">
+                  <Label resid="funcStoreDocButtonLabel" />
+                  <Supertip>
+                    <Title resid="funcStoreDocSuperTipTitle" />
+                    <Description resid="funcStoreDocSuperTipDescription" />
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon-16" />
+                    <bt:Image size="32" resid="icon-32" />
+                    <bt:Image size="80" resid="icon-80" />
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>storeAttachments</FunctionName>
+                  </Action>
+                </Control>
               </Group>
             </OfficeTab>
           </ExtensionPoint>
@@ -101,10 +116,15 @@
 
         <bt:String id="funcProvideProofButtonLabel" DefaultValue="Provide Proof" />
         <bt:String id="funcProvidePSuperTipTitle" DefaultValue="Provide Proof" />
+
+        <bt:String id="funcStoreDocButtonLabel" DefaultValue="Store Attachments" />
+        <bt:String id="funcStoreDocSuperTipTitle" DefaultValue="Store Attachments" />
+
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="funcValidPSuperTipDescription" DefaultValue="Validate proof using Ibera service" />
         <bt:String id="funcProvPSuperTipDescription" DefaultValue="Provide proof using Ibera service" />
+        <bt:String id="funcStoreDocSuperTipDescription" DefaultValue="Store attachments using Ibera service" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
