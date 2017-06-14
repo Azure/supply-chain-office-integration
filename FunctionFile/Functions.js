@@ -169,6 +169,26 @@ function validateProof(event) {
     });
 }
 
+function addAttachments(proofs, event) {
+  if (proofs && proofs.length){
+    for (i in proofs){
+      var proof = proofs[0];
+      if (proof && proof.encrypted_proof && proof.encrypted_proof.sas_token && proof.encrypted_proof.document_name) {
+      Office.context.mailbox.item.addFileAttachmentAsync(
+          proof.encrypted_proof.sas_token,
+          proof.encrypted_proof.document_name,
+          { asyncContext: null },
+          function (asyncResult) {
+              if (asyncResult.status == Office.AsyncResultStatus.Failed){
+                showMessage("Couldn't add attachment " + proof.encrypted_proof.document_name, event);
+              }
+          }
+        );
+      }
+    }
+  }
+}
+
 function provideProof(event) {
 	// if (Office.context.mailbox.item.subject == "ibera key request")
 	{
@@ -183,8 +203,10 @@ function provideProof(event) {
 				if (response.error || !response.result) {
 					return showMessage(response.error, event);
 				}
+        addAttachments(response.result);
         var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(response.result, null, 2) + endProofString;
         Office.context.mailbox.item.displayReplyForm(replyText);
+
         showMessage("Proof have been added for: " + trackingId, event);
 			});
 		});
