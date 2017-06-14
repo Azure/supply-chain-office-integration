@@ -94,7 +94,7 @@ function storeAttachments(event) {
           {
             for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
               var ad = response.attachmentProcessingDetails[a];
-              var trackingId = "document_id2_" + ad.hash; // encodeURIComponent(ad.hash);
+              var trackingId = "id_" + ad.hash; // encodeURIComponent(ad.hash);
               showMessage(trackingId, event);
               trackingIds.push(encodeURIComponent(trackingId));
               var proof = {
@@ -145,7 +145,9 @@ function validateProof(event) {
                     return showMessage("error retrieving the proof from blockchain for validation - tracking_id: " + jsonProof[0].trackingId, event); 
                   }   
                   var proofFromChain = fromChain.result[0];
-                  if (proofFromChain.public_proof.encrypted_proof_hash == sha256(jsonProof[0].encrypted_proof)){
+                  var proofToEncryptStr = JSON.stringify(jsonProof[0].encrypted_proof);
+                  var hash = sha256(proofToEncryptStr);
+                  if (proofFromChain.public_proof.encrypted_proof_hash == hash.toUpperCase()){
                     return showMessage("Valid proof for tracking_id: " + jsonProof[0].tracking_id, event);  
                   }
                   else {
@@ -170,7 +172,7 @@ function validateProof(event) {
 }
 
 function addAttachments(proofs, event) {
-  if (proofs && proofs.length){
+  /*
     for (i in proofs){
       var proof = proofs[0];
       if (proof && proof.encrypted_proof && proof.encrypted_proof.sas_token && proof.encrypted_proof.document_name) {
@@ -187,6 +189,7 @@ function addAttachments(proofs, event) {
       }
     }
   }
+      */
 }
 
 function provideProof(event) {
