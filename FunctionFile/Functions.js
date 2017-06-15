@@ -53,6 +53,11 @@ function getProof(trackingId, callback) {
   xhr.open('GET', '/api/proof?tracking_id=' + encodeURIComponent(trackingId));
   handleRequest(xhr, null, callback);
 }
+function getHash(url, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/hash?url=' + encodeURIComponent(url));
+  handleRequest(xhr, null, callback);
+}
 
 function storeAttachments(event) {
   if (Office.context.mailbox.item.attachments == undefined) {
@@ -82,6 +87,7 @@ function storeAttachments(event) {
             attachment = attachment._data$p$0 || attachment.$0_0;
 
             if (attachment !== undefined) {
+                // I copied this line from the msdn example - not sure why first stringify and then pars the attachment
                 serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
             }
         }
@@ -94,7 +100,7 @@ function storeAttachments(event) {
           {
             for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
               var ad = response.attachmentProcessingDetails[a];
-              var trackingId = "id_" + ad.hash; // encodeURIComponent(ad.hash);
+              var trackingId = "id_" + ad.hash; 
               showMessage(trackingId, event);
               trackingIds.push(encodeURIComponent(trackingId));
               var proof = {
@@ -126,6 +132,22 @@ function storeAttachments(event) {
   });
 }
 
+function getFirstAttachmentHash(hash){
+    if(Office.context.mailbox.item.attachments.length > 0) {
+        var attachment = Office.context.mailbox.item.attachments[0];
+        attachment = attachment._data$p$0 || attachment.$0_0;
+
+        if (attachment !== undefined) {
+            getHash(JSON.stringify(attachment), function(response) {
+              if (response.error || !response.result) {
+                return showMessage(response.error, event);
+              }
+              hash = response.result;
+            });
+        }
+    }  
+}
+
 function validateProof(event) {
 		Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
 			if (result.status === Office.AsyncResultStatus.Failed) {
@@ -148,7 +170,19 @@ function validateProof(event) {
                   var proofToEncryptStr = JSON.stringify(jsonProof[0].encrypted_proof);
                   var hash = sha256(proofToEncryptStr);
                   if (proofFromChain.public_proof.encrypted_proof_hash == hash.toUpperCase()){
-                    return showMessage("Valid proof for tracking_id: " + jsonProof[0].tracking_id, event);  
+                    if (proofFromChain.public_proof.document_hash){
+                        getFirstAttachmentHash(function(hash){
+                        if (proofFromChain.public_proof.document_hash == hash.toUpperCase()){
+                          return showMessage("Valid proof with attachment for tracking_id: " + jsonProof[0].tracking_id, event);
+                        } 
+                        else{
+                          return showMessage("Valid proof BUT attachment NOT valid for tracking_id: " + jsonProof[0].tracking_id, event);
+                        }
+                       }); 
+                    }
+                    else {
+                       return showMessage("Valid proof with NO attachment for tracking_id: " + jsonProof[0].tracking_id, event);                       
+                    }
                   }
                   else {
                     return showMessage("NOT valid proof for tracking_id: " + jsonProof[0].tracking_id, event);               
@@ -171,27 +205,6 @@ function validateProof(event) {
     });
 }
 
-function addAttachments(proofs, event) {
-  /*
-    for (i in proofs){
-      var proof = proofs[0];
-      if (proof && proof.encrypted_proof && proof.encrypted_proof.sas_token && proof.encrypted_proof.document_name) {
-      Office.context.mailbox.item.addFileAttachmentAsync(
-          proof.encrypted_proof.sas_token,
-          proof.encrypted_proof.document_name,
-          { asyncContext: null },
-          function (asyncResult) {
-              if (asyncResult.status == Office.AsyncResultStatus.Failed){
-                showMessage("Couldn't add attachment " + proof.encrypted_proof.document_name, event);
-              }
-          }
-        );
-      }
-    }
-  }
-      */
-}
-
 function provideProof(event) {
 	// if (Office.context.mailbox.item.subject == "ibera key request")
 	{
@@ -206,10 +219,24 @@ function provideProof(event) {
 				if (response.error || !response.result) {
 					return showMessage(response.error, event);
 				}
-        addAttachments(response.result);
-        var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(response.result, null, 2) + endProofString;
-        Office.context.mailbox.item.displayReplyForm(replyText);
-
+        var proofs = response.result;
+        var attachments = [];
+        for (var i in proofs){
+          var proof = proofs[i];
+          if (proof && proof.encrypted_proof && proof.encrypted_proof.sas_token && proof.encrypted_proof.document_name) {
+            attachments.push({
+              type : Office.MailboxEnums.AttachmentType.File,
+              url : proof.encrypted_proof.sas_token, 
+              name : proof.encrypted_proof.document_name
+            })
+          }
+        }
+        var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
+        Office.context.mailbox.item.displayReplyForm({
+          'htmlBody' : replyText,
+          'attachments' : attachments
+        });
+        
         showMessage("Proof have been added for: " + trackingId, event);
 			});
 		});

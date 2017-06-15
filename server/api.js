@@ -4,6 +4,7 @@ const express = require('express');
 const router = express.Router();
 const bodyParser = require('body-parser');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const http = require('http');
 
 const development = process.env.NODE_ENV !== 'production';
 const iberaServicesEndpoint = "https://localhost:443";
@@ -69,5 +70,22 @@ router.get('/key', function (req, res) {
     catch (ex){
         res.status(503).send({error: ex.message});
     }
+});
+router.get('/hash', function (req, res) {
+    http.get(url.parse(req.query.url), function(res) {
+        var data = [];
+
+        res.on('data', function(chunk) {
+            data.push(chunk);
+        }).on('end', function() {
+            //at this point data is an array of Buffers
+            //so Buffer.concat() can make us a new Buffer
+            //of all of them together
+            var buffer = Buffer.concat(data);
+            res.send({result: sha256(buffer).ToUpperCase(), error: result.error});
+        }).on('error', function() {
+            res.status(503).send({error: "error hashing"});
+        })
+    });
 });
 module.exports = router;
