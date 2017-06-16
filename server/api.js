@@ -5,6 +5,7 @@ const router = express.Router();
 const bodyParser = require('body-parser');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
 const http = require('http');
+const url = require('url');
 
 const development = process.env.NODE_ENV !== 'production';
 const iberaServicesEndpoint = "https://localhost:443";
@@ -24,11 +25,6 @@ function handleRequest(xhr, body, callback) {
         });
       }
     }
-  };
-  xhr.onerror = function () {
-    callback({
-      error: 'Request error'
-    });
   };
   xhr.send(body && JSON.stringify(body) || null);
 }

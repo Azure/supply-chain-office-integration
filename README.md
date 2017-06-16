@@ -19,21 +19,18 @@ To install dependencies:
 $ npm install
 ```
 
-Before running the server, set the environment variable STAMPERY_TOKEN that you can acquire from https://api-dashboard.ibera.com/.
-
 To start the server:
 
 ```
 $ npm start
 ```
 
-Open Web browser https://localhost:8443/ and make the certificate trusted.
+Open Web browser https://localhost:8443/ and make the certificate trusted by adding it to the trusted root authorities.
 
 To test that the REST API is accessible and working, you can issue a request to the ping endpoint and expect a hash to be returned:
 
-```
-$ curl https://localhost:8443/api/ping
-6180DAB92AB0107FF5FBF55950AEB2A1F2CFFA287A213834CA7087F2276E017AD1774E4BC99A1FEFCEADF3B5507030730BFA92EAEFAD49FC4C3683AE6E182614
+``` 
+$ curl https://localhost:8443/api/key
 ```
 ## Deployment
 

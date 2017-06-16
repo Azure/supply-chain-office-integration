@@ -60,6 +60,10 @@ function getHash(url, callback) {
 }
 
 function storeAttachments(event) {
+  processAttachments(true, event, storeAttachmentsCallback);
+}
+
+function processAttachments(upload, event, callback) {
   if (Office.context.mailbox.item.attachments == undefined) {
       return showMessage("Not supported: Attachments are not supported by your Exchange server.", event);
   } else if (Office.context.mailbox.item.attachments.length == 0) {
@@ -71,6 +75,7 @@ function storeAttachments(event) {
   serviceRequest.attachments = [];
   serviceRequest.containerName = containerName;
   serviceRequest.folderName = config.user_id;
+  serviceRequest.upload = upload;
 
   Office.context.mailbox.getCallbackTokenAsync( function attachmentTokenCallback(asyncResult, userContext) {
     if (asyncResult.status == "succeeded") {
@@ -79,7 +84,7 @@ function storeAttachments(event) {
         xhr = new XMLHttpRequest();
         // xhr.open("POST", "https://localhost:44320/api/Attachment", true);
         xhr.open("POST", "https://ibera-document-service.azurewebsites.net/api/Attachment", true);
-        xhr.setRequestHeader("Content-Type", "application/json"); //; charset=utf-8");
+        xhr.setRequestHeader("Content-Type", "application/json");
 
         // Translate the attachment details into a form easily understood by WCF.
         for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
@@ -91,39 +96,8 @@ function storeAttachments(event) {
                 serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
             }
         }
-        handleRequest(xhr, serviceRequest, function(response){
-          if (response.error){
-            return showMessage("Error: " + response.error, event);           
-          }
-          var trackingIds = [];
-          if (response.attachmentProcessingDetails)
-          {
-            for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
-              var ad = response.attachmentProcessingDetails[a];
-              var trackingId = "id_" + ad.hash; 
-              showMessage(trackingId, event);
-              trackingIds.push(encodeURIComponent(trackingId));
-              var proof = {
-                  tracking_id : trackingId,
-                  proof_to_encrypt : {
-                    url : ad.url,
-                    sas_token : ad.sasToken,
-                    document_name : ad.name
-                  },
-                  public_proof : {
-                      document_hash : ad.hash,
-                      creator_id : config.user_id
-                  }
-              }; 
-              postProof(proof, function(response){
-                if (response.error || !response.result) {
-                  return showMessage(response.error, event);
-                }
-              });
-            }
-          }
-          Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
-          return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
+        handleRequest(xhr, serviceRequest, function(response) {
+          callback(response, event);
         });
     }
     else {
@@ -132,20 +106,53 @@ function storeAttachments(event) {
   });
 }
 
-function getFirstAttachmentHash(hash){
-    if(Office.context.mailbox.item.attachments.length > 0) {
-        var attachment = Office.context.mailbox.item.attachments[0];
-        attachment = attachment._data$p$0 || attachment.$0_0;
-
-        if (attachment !== undefined) {
-            getHash(JSON.stringify(attachment), function(response) {
-              if (response.error || !response.result) {
-                return showMessage(response.error, event);
-              }
-              hash = response.result;
-            });
+function storeAttachmentsCallback(response, event) {
+  if (response.error){
+    return showMessage("Error: " + response.error, event);           
+  }
+  var trackingIds = [];
+  if (response.attachmentProcessingDetails)
+  {
+    for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
+      var ad = response.attachmentProcessingDetails[a];
+      var trackingId = "id_" + ad.hash; 
+      trackingIds.push(encodeURIComponent(trackingId));
+      var proof = {
+          tracking_id : trackingId,
+          proof_to_encrypt : {
+            url : ad.url,
+            sas_token : ad.sasToken,
+            document_name : ad.name
+          },
+          public_proof : {
+              document_hash : ad.hash,
+              creator_id : config.user_id
+          }
+      }; 
+      postProof(proof, function(response){
+        if (response.error || !response.result) {
+          return showMessage(response.error, event);
         }
-    }  
+      });
+    }
+  }
+  Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+  return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
+}
+
+function getFirstAttachmentHash(event, callback){
+  processAttachments(true, event, function(response, event) {
+    var hash = "";
+    if (response.error){
+      showMessage("Error: " + response.error, event);           
+    }
+    if (response.attachmentProcessingDetails) {
+      if (response.attachmentProcessingDetails.length>0){
+        hash = response.attachmentProcessingDetails[0].hash;
+      }
+    }
+    callback(hash);
+  });
 }
 
 function validateProof(event) {
@@ -170,15 +177,15 @@ function validateProof(event) {
                   var proofToEncryptStr = JSON.stringify(jsonProof[0].encrypted_proof);
                   var hash = sha256(proofToEncryptStr);
                   if (proofFromChain.public_proof.encrypted_proof_hash == hash.toUpperCase()){
-                    if (proofFromChain.public_proof.document_hash){
-                        getFirstAttachmentHash(function(hash){
-                        if (proofFromChain.public_proof.document_hash == hash.toUpperCase()){
-                          return showMessage("Valid proof with attachment for tracking_id: " + jsonProof[0].tracking_id, event);
-                        } 
-                        else{
-                          return showMessage("Valid proof BUT attachment NOT valid for tracking_id: " + jsonProof[0].tracking_id, event);
-                        }
-                       }); 
+                    if (proofFromChain.public_proof.public_proof && proofFromChain.public_proof.public_proof.document_hash){
+                        getFirstAttachmentHash(event, function(hash){
+                          if (proofFromChain.public_proof.public_proof.document_hash == hash) {
+                            return showMessage("Valid proof with attachment for tracking_id: " + jsonProof[0].tracking_id, event);
+                          } 
+                          else{
+                            return showMessage("Valid proof BUT attachment NOT valid for tracking_id: " + jsonProof[0].tracking_id, event);
+                          }
+                        }); 
                     }
                     else {
                        return showMessage("Valid proof with NO attachment for tracking_id: " + jsonProof[0].tracking_id, event);                       
