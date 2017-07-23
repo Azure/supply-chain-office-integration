@@ -34,25 +34,26 @@ function handleRequest(xhr, body, callback) {
   xhr.send(body && JSON.stringify(body) || null);
 }
 
-function postProof(body, callback) {
+function putProof(body, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/api/proof');
+  xhr.open('PUT', '/api/proof');
   xhr.setRequestHeader('Content-Type', 'application/json');
   handleRequest(xhr, body, callback);
 }
 
 function getKey(keyId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/key?key_id='+ encodeURIComponent(keyId));
+  xhr.open('GET', '/api/key/'+ encodeURIComponent(keyId));
   xhr.setRequestHeader('Content-Type', 'application/json');
   handleRequest(xhr, null, callback);
 }
 
 function getProof(trackingId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/proof?tracking_id=' + encodeURIComponent(trackingId));
+  xhr.open('GET', '/api/proof/' + encodeURIComponent(trackingId));
   handleRequest(xhr, null, callback);
 }
+
 function getHash(url, callback) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/api/hash?url=' + encodeURIComponent(url));
@@ -129,7 +130,7 @@ function storeAttachmentsCallback(response, event) {
               creator_id : config.user_id
           }
       }; 
-      postProof(proof, function(response){
+      putProof(proof, function(response) {
         if (response.error || !response.result) {
           return showMessage(response.error, event);
         }

@@ -21,8 +21,13 @@
     "yargs": "^3.24.0"
   },
   "dependencies": {
-    "body-parser": "^1.15.2",
+    "body-parser": "^1.17.2",
     "express": "^4.14.0",
+    "express-validator": "^3.2.1",
+    "http-status-codes": "^1.1.6",
+    "jsonschema": "^1.1.1",
+    "request": "^2.81.0",
+    "request-promise": "^4.2.1",
     "web3": "^0.19.0",
     "xmlhttprequest": "^1.8.0"
   },
