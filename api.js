@@ -44,14 +44,19 @@ app.get('/proof/:tracking_id', async (req, res) => {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
     }
 
-    var trackingId = decodeURIComponent(req.params.tracking_id);
+    // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
+    var trackingId = req.params.tracking_id.trim();
+    if (decodeURIComponent(trackingId) === trackingId) {
+      trackingId = encodeURIComponent(trackingId);
+    }
+
     var decrypt = req.sanitizeQuery('decrypt').toBoolean();
 
     var path = iberaServicesEndpoint + `/api/proof/${trackingId}?decrypt=${decrypt}`;
     var result = await request.get(path, { json: true });
 
     console.log(`got response: ${util.inspect(result)}`);
-    res.json(result);
+    res.json({ result });
   }
   catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
@@ -69,7 +74,12 @@ app.get('/key/:key_id', async (req, res) => {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
     }
 
-    var keyId = decodeURIComponent(req.params.key_id);
+    
+    // keyId is encoded. leave it encoded since we also use it as part of the URL in the request
+    var keyId = req.params.key_id;
+     if (decodeURIComponent(keyId) === keyId) {
+      keyId = encodeURIComponent(keyId);
+    }
 
     var path = iberaServicesEndpoint + `/api/key/${keyId}`;
     var result = await request.get(path, { json: true });

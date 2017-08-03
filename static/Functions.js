@@ -10,11 +10,17 @@ var config = {
   user_id : "FarmerID100"
 };
 
+
+setTimeout(function(){
+  console.log('here');
+}, 3000);
+
 const containerName = "attachments";
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
 function handleRequest(xhr, body, callback) {
+  debugger;
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if  (xhr.status === 200) {
@@ -43,14 +49,20 @@ function putProof(body, callback) {
 
 function getKey(keyId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/key/'+ encodeURIComponent(keyId));
+  if (keyId === decodeURIComponent(keyId)) {
+    keyId = encodeURIComponent(keyId);
+  }
+  xhr.open('GET', '/api/key/'+ keyId);
   xhr.setRequestHeader('Content-Type', 'application/json');
   handleRequest(xhr, null, callback);
 }
 
 function getProof(trackingId, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/proof/' + encodeURIComponent(trackingId));
+   if (trackingId === decodeURIComponent(trackingId)) {
+    trackingId = encodeURIComponent(trackingId);
+  }
+  xhr.open('GET', '/api/proof/' + trackingId);
   handleRequest(xhr, null, callback);
 }
 
