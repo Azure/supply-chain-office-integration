@@ -14,11 +14,12 @@ const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
+
 app.put('/proof', async (req, res) => {
   
   try {
 
-    // TODOL add validations to schema
+    // TODO add validations to schema
 
     var uri = iberaServicesEndpoint + `/api/proof`;
     var result = await request({
@@ -94,6 +95,7 @@ app.get('/key/:keyId', async (req, res) => {
   }
 });
 
+
 // TODO: revisit code
 app.get('/hash', (req, res) => {
   console.log(`in hash api- ${util.inspect(req)}`);
@@ -120,5 +122,6 @@ app.get('/hash', (req, res) => {
 
   });
 });
+
 
 module.exports = app;
