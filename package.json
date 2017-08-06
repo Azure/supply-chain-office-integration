@@ -26,6 +26,7 @@
     "express-validator": "^3.2.1",
     "http-status-codes": "^1.1.6",
     "jsonschema": "^1.1.1",
+    "nconf": "^0.8.4",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
     "web3": "^0.19.0",

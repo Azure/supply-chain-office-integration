@@ -5,11 +5,13 @@ var express = require('express');
 var HttpStatus = require('http-status-codes');
 var validate = require('jsonschema').validate;
 var request = require('request-promise');
+var config = require('../config');
 
 var app = express();
 
 const development = process.env.NODE_ENV !== 'production';
-const iberaServicesEndpoint = "https://localhost:443";
+const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 app.put('/proof', async (req, res) => {
@@ -35,17 +37,17 @@ app.put('/proof', async (req, res) => {
 });
 
 
-app.get('/proof/:tracking_id', async (req, res) => {
+app.get('/proof/:trackingId', async (req, res) => {
   
   try {
-    req.checkParams('tracking_id', 'Invalid tracking_id').notEmpty();
+    req.checkParams('trackingId', 'Invalid trackingId').notEmpty();
     var errors = await req.getValidationResult();
     if (!errors.isEmpty()) {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
     }
 
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
-    var trackingId = req.params.tracking_id.trim();
+    var trackingId = req.params.trackingId.trim();
     if (decodeURIComponent(trackingId) === trackingId) {
       trackingId = encodeURIComponent(trackingId);
     }
@@ -65,10 +67,10 @@ app.get('/proof/:tracking_id', async (req, res) => {
 });
 
 
-app.get('/key/:key_id', async (req, res) => {
+app.get('/key/:keyId', async (req, res) => {
   try {
 
-    req.checkParams('key_id', 'Invalid key_id').notEmpty();
+    req.checkParams('keyId', 'Invalid keyId').notEmpty();
     var errors = await req.getValidationResult();
     if (!errors.isEmpty()) {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
@@ -76,7 +78,7 @@ app.get('/key/:key_id', async (req, res) => {
 
     
     // keyId is encoded. leave it encoded since we also use it as part of the URL in the request
-    var keyId = req.params.key_id;
+    var keyId = req.params.keyId;
      if (decodeURIComponent(keyId) === keyId) {
       keyId = encodeURIComponent(keyId);
     }

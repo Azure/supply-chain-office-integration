@@ -7,7 +7,7 @@ Office.initialize = function () {
 
 // TODO:  the following config values need to be set on asettings page
 var config = {
-  user_id : "FarmerID100"
+  userId : "FarmerID100"
 };
 
 
@@ -87,7 +87,7 @@ function processAttachments(upload, event, callback) {
   serviceRequest.ewsUrl = Office.context.mailbox.ewsUrl;
   serviceRequest.attachments = [];
   serviceRequest.containerName = containerName;
-  serviceRequest.folderName = config.user_id;
+  serviceRequest.folderName = config.userId;
   serviceRequest.upload = upload;
 
   Office.context.mailbox.getCallbackTokenAsync( function attachmentTokenCallback(asyncResult, userContext) {
@@ -131,15 +131,15 @@ function storeAttachmentsCallback(response, event) {
       var trackingId = "id_" + ad.hash; 
       trackingIds.push(encodeURIComponent(trackingId));
       var proof = {
-          tracking_id : trackingId,
-          proof_to_encrypt : {
+          trackingId : trackingId,
+          proofToEncrypt : {
             url : ad.url,
-            sas_token : ad.sasToken,
-            document_name : ad.name
+            sasToken : ad.sasToken,
+            documentName : ad.name
           },
-          public_proof : {
-              document_hash : ad.hash,
-              creator_id : config.user_id
+          publicProof : {
+              documentHash : ad.hash,
+              creatorId : config.userId
           }
       }; 
       putProof(proof, function(response) {
@@ -182,30 +182,30 @@ function validateProof(event) {
               var proof = proofs[i].split(endProofString);
               if (proof.length >= 1) {
                 var jsonProof = JSON.parse(proof[0]);
-                getProof(jsonProof[0].tracking_id, function(fromChain){
+                getProof(jsonProof[0].trackingId, function(fromChain){
                   if (fromChain.error || !fromChain.result) {
-                    return showMessage("error retrieving the proof from blockchain for validation - tracking_id: " + jsonProof[0].trackingId, event); 
+                    return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId, event); 
                   }   
                   var proofFromChain = fromChain.result[0];
-                  var proofToEncryptStr = JSON.stringify(jsonProof[0].encrypted_proof);
+                  var proofToEncryptStr = JSON.stringify(jsonProof[0].encryptedProof);
                   var hash = sha256(proofToEncryptStr);
-                  if (proofFromChain.public_proof.encrypted_proof_hash == hash.toUpperCase()){
-                    if (proofFromChain.public_proof.public_proof && proofFromChain.public_proof.public_proof.document_hash){
+                  if (proofFromChain.publicProof.encryptedProofHash == hash.toUpperCase()){
+                    if (proofFromChain.publicProof.publicProof && proofFromChain.publicProof.publicProof.documentHash){
                         getFirstAttachmentHash(event, function(hash){
-                          if (proofFromChain.public_proof.public_proof.document_hash == hash) {
-                            return showMessage("Valid proof with attachment for tracking_id: " + jsonProof[0].tracking_id, event);
+                          if (proofFromChain.publicProof.publicProof.documentHash == hash) {
+                            return showMessage("Valid proof with attachment for trackingId: " + jsonProof[0].trackingId, event);
                           } 
                           else{
-                            return showMessage("Valid proof BUT attachment NOT valid for tracking_id: " + jsonProof[0].tracking_id, event);
+                            return showMessage("Valid proof BUT attachment NOT valid for trackingId: " + jsonProof[0].trackingId, event);
                           }
                         }); 
                     }
                     else {
-                       return showMessage("Valid proof with NO attachment for tracking_id: " + jsonProof[0].tracking_id, event);                       
+                       return showMessage("Valid proof with NO attachment for trackingId: " + jsonProof[0].trackingId, event);                       
                     }
                   }
                   else {
-                    return showMessage("NOT valid proof for tracking_id: " + jsonProof[0].tracking_id, event);               
+                    return showMessage("NOT valid proof for trackingId: " + jsonProof[0].trackingId, event);               
                   }
                 });
               }
@@ -243,11 +243,11 @@ function provideProof(event) {
         var attachments = [];
         for (var i in proofs){
           var proof = proofs[i];
-          if (proof && proof.encrypted_proof && proof.encrypted_proof.sas_token && proof.encrypted_proof.document_name) {
+          if (proof && proof.encryptedProof && proof.encryptedProof.sasToken && proof.encryptedProof.documentName) {
             attachments.push({
               type : Office.MailboxEnums.AttachmentType.File,
-              url : proof.encrypted_proof.sas_token, 
-              name : proof.encrypted_proof.document_name
+              url : proof.encryptedProof.sasToken, 
+              name : proof.encryptedProof.documentName
             })
           }
         }
