@@ -32,6 +32,19 @@ To test that the REST API is accessible and working, you can issue a request to 
 ``` 
 $ curl https://localhost:8443/api/key
 ```
+
+
+## configuration 
+
+To run locally, copy the file `dev.sample.json` in the `config` folder and create a new file called `dev.private.json`.
+
+Fill in the following values:
+
+`IBERA_SERVICES_ENDPOINT`: The URL for the iBera services service
+
+When deploying to production, fill these values in the environment variables.
+
+
 ## Deployment
 
 Run the gulp dist task and provide the URL behind which you are deploying, for example:
