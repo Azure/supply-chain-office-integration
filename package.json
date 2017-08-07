@@ -4,6 +4,10 @@
   "scripts": {
     "start": "node server.js"
   },
+  "engines": {
+    "node": "7.6.0",
+    "npm": "4.1.2"
+  },
   "devDependencies": {
     "chalk": "^1.1.1",
     "del": "^2.1.0",
@@ -31,9 +35,5 @@
     "request-promise": "^4.2.1",
     "web3": "^0.19.0",
     "xmlhttprequest": "^1.8.0"
-  },
-  "engines": {
-    "node": "^7.6.0",
-    "npm": "4.1.2"
   }
 }
