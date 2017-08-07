@@ -18,9 +18,7 @@ var api = require('./api');
 var port = process.env.PORT || 8443;
 var isProd = process.env.NODE_ENV === 'production';
 var app = express();
-
 var serverOptions = {};
-
 
 if (!isProd) {
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
@@ -55,6 +53,7 @@ if (isProd) {
 	});
 }
 else {
+	// this is development environment, use a local ssl server with self signed certificates
 	https.createServer(serverOptions, app).listen(port, err => {
 		if (err) return console.error(err);
 		console.info(`server is listening on port ${port}`);
