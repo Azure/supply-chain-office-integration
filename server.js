@@ -23,7 +23,7 @@ var serverOptions = {};
 if (isProd) {
 
 	// in prod, enforce secured connections
-	app.use((req, res) => {
+	app.use((req, res, next) => {
 		if (!req.headers['x-arr-ssl']) {
 			return res.status(HttpStatus.BAD_REQUEST).json({ error: 'use https'});
 		}
