@@ -22,12 +22,6 @@ var app = express();
 var serverOptions = {};
 
 
-// middleware to log all incoming requests
-app.use((req, res, next) => {
-	console.log(`url: ${req.method} ${req.originalUrl} ${util.inspect(req.body || {})}, headers: ${util.inspect(req.headers)}`);
-	return next();
-});
-
 if (!isProd) {
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
   serverOptions.key = fs.readFileSync('./cert/server.key');
@@ -36,6 +30,11 @@ if (!isProd) {
 app.use(bodyParser.json());
 app.use(expressValidator());
 
+// middleware to log all incoming requests
+app.use((req, res, next) => {
+	console.log(`url: ${req.method} ${req.originalUrl} ${util.inspect(req.body || {})}, headers: ${util.inspect(req.headers)}`);
+	return next();
+});
 
 // attach API to server
 app.use('/api', api);
@@ -49,7 +48,7 @@ app.use('/', express.static(path.join(__dirname, 'static')));
 if (isProd) {
 	// in prod we will use Azure's certificate to use ssl.
 	// so no need to use https here with a custom certificate for now.
-	// we enforce https connections in the first middleware when running in prod (see above).
+	// TODO: enforce https connections when running in prod
 	http.createServer(app).listen(port, err => {
 		if (err) return console.error(err);
 		console.info(`server is listening on port ${port}`);
