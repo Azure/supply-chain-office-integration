@@ -16,12 +16,20 @@ var expressValidator = require('express-validator');
 var api = require('./api');
 
 var port = process.env.PORT || 8443;
-var development = process.env.NODE_ENV !== 'production';
+var isProd = process.env.NODE_ENV === 'production';
 var app = express();
 
 var serverOptions = {};
 
-if (development) {
+if (isProd) {
+	app.use((req, res) => {
+		if (!req.secure) {
+			return res.status(403).json({ error: 'use https' });
+		}
+		return next();
+	});
+}
+else {
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
   serverOptions.key = fs.readFileSync('./cert/server.key');
 }
@@ -44,7 +52,18 @@ app.get('/', (req, res) => {
 
 app.use('/', express.static(path.join(__dirname, 'static')));
 
-https.createServer(serverOptions, app).listen(port, err => {
-	if (err) return console.error(err);
-	console.info(`server is listening on port ${port}`);
-});
+if (isProd) {
+	// in prod we will use Azure's certificate to use ssl.
+	// so no need to use https here with a custom certificate for now.
+	// we enforce https connections in the first middleware when running in prod (see above).
+	http.createServer(app).listen(port, err => {
+		if (err) return console.error(err);
+		console.info(`server is listening on port ${port}`);
+	});
+}
+else {
+	https.createServer(serverOptions, app).listen(port, err => {
+		if (err) return console.error(err);
+		console.info(`server is listening on port ${port}`);
+	});
+}
