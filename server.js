@@ -3,7 +3,6 @@
 // TODO: asb Beat- what's that?
 process.env.STAMPERY_TOKEN = "65002b66-089a-4aad-eb00-962c5c4e0e59";
 
-
 var util = require('util');
 var express = require('express');
 var http = require('http');
@@ -12,6 +11,7 @@ var fs = require('fs');
 var path = require('path');
 var bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
+var HttpStatus = require('http-status-codes');
 
 var api = require('./api');
 
@@ -20,7 +20,17 @@ var isProd = process.env.NODE_ENV === 'production';
 var app = express();
 var serverOptions = {};
 
-if (!isProd) {
+if (isProd) {
+
+	// in prod, enforce secured connections
+	app.use((req, res) => {
+		if (!req.headers['x-arr-ssl']) {
+			return res.status(HttpStatus.BAD_REQUEST).json({ error: 'use https'});
+		}
+		return next();
+	});
+}
+else {
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
   serverOptions.key = fs.readFileSync('./cert/server.key');
 }
@@ -46,7 +56,7 @@ app.use('/', express.static(path.join(__dirname, 'static')));
 if (isProd) {
 	// in prod we will use Azure's certificate to use ssl.
 	// so no need to use https here with a custom certificate for now.
-	// TODO: enforce https connections when running in prod
+	// enforcing https in prod is being done on the first middleware (see above)
 	http.createServer(app).listen(port, err => {
 		if (err) return console.error(err);
 		console.info(`server is listening on port ${port}`);
