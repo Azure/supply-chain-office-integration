@@ -38,6 +38,10 @@ app.use((req, res, next) => {
 // attach API to server
 app.use('/api', api);
 
+app.get('/', (req, res) => {
+	return res.end(`iBera Outlook Add-In Service in on...`);
+});
+
 app.use('/', express.static(path.join(__dirname, 'static')));
 
 https.createServer(serverOptions, app).listen(port, err => {
