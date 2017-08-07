@@ -23,7 +23,12 @@ var serverOptions = {};
 
 if (isProd) {
 	app.use((req, res) => {
-		if (!req.secure) {
+
+		var proto = req.connection.encrypted ? 'https' : 'http';
+    proto = req.headers['x-forwarded-proto'] || proto;
+    proto = proto.split(/\s*,\s*/)[0];
+
+		if (proto === 'http') {
 			return res.status(403).json({ error: 'use https' });
 		}
 		return next();
