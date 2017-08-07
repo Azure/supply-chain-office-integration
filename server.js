@@ -21,6 +21,13 @@ var app = express();
 
 var serverOptions = {};
 
+
+// middleware to log all incoming requests
+app.use((req, res, next) => {
+	console.log(`url: ${req.method} ${req.originalUrl} ${util.inspect(req.body || {})}, headers: ${util.inspect(req.headers)}`);
+	return next();
+});
+
 if (isProd) {
 	app.use((req, res) => {
 
@@ -42,11 +49,6 @@ else {
 app.use(bodyParser.json());
 app.use(expressValidator());
 
-// middleware to log all incoming requests
-app.use((req, res, next) => {
-	console.log(`url: ${req.method} ${req.originalUrl} ${util.inspect(req.body || {})}`);
-	return next();
-});
 
 // attach API to server
 app.use('/api', api);
