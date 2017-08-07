@@ -28,20 +28,7 @@ app.use((req, res, next) => {
 	return next();
 });
 
-if (isProd) {
-	app.use((req, res) => {
-
-		var proto = req.connection.encrypted ? 'https' : 'http';
-    proto = req.headers['x-forwarded-proto'] || proto;
-    proto = proto.split(/\s*,\s*/)[0];
-
-		if (proto === 'http') {
-			return res.status(403).json({ error: 'use https' });
-		}
-		return next();
-	});
-}
-else {
+if (!isProd) {
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
   serverOptions.key = fs.readFileSync('./cert/server.key');
 }
