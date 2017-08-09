@@ -6,8 +6,8 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Ibera for Outlook"/>
   <Description DefaultValue="Open and transparent supply chain by leveraging the power of the blockchain."/>
-  <IconUrl DefaultValue="/images/icon-32.png"/>
-  <HighResolutionIconUrl DefaultValue="/images/hi-res-icon.png"/>
+  <IconUrl DefaultValue="https://iberaoutlook1.azurewebsites.net/images/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://iberaoutlook1.azurewebsites.net/images/hi-res-icon.png"/>
   <Hosts>
     <Host Name="Mailbox"/>
   </Hosts>
@@ -22,7 +22,7 @@
         <!-- NOTE: Just reusing the read taskpane page that is invoked by the button
              on the ribbon in clients that support add-in commands. You can
              use a completely different page if desired -->
-        <SourceLocation DefaultValue="/Functions.html"/>
+        <SourceLocation DefaultValue="https://iberaoutlook1.azurewebsites.net/Functions.html"/>
         <RequestedHeight>450</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -101,12 +101,12 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="icon-16" DefaultValue="/images/icon-16.png"/>
-        <bt:Image id="icon-32" DefaultValue="/images/icon-32.png"/>
-        <bt:Image id="icon-80" DefaultValue="/images/icon-80.png"/>
+        <bt:Image id="icon-16" DefaultValue="https://iberaoutlook1.azurewebsites.net/images/icon-16.png"/>
+        <bt:Image id="icon-32" DefaultValue="https://iberaoutlook1.azurewebsites.net/images/icon-32.png"/>
+        <bt:Image id="icon-80" DefaultValue="https://iberaoutlook1.azurewebsites.net/images/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="functionFile" DefaultValue="/Functions.html"/>
+        <bt:Url id="functionFile" DefaultValue="https://iberaoutlook1.azurewebsites.net/Functions.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="groupLabel" DefaultValue="Ibera"/>
