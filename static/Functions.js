@@ -20,23 +20,22 @@ const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
 function handleRequest(xhr, body, callback) {
-  debugger;
   xhr.onreadystatechange = function () {
     if (xhr.readyState === 4) {
       if  (xhr.status === 200) {
-        callback(JSON.parse(xhr.responseText));
-      } else {
-        callback({
-          error: 'Request status: ' + xhr.status
-        });
-      }
+        return callback(null, JSON.parse(xhr.responseText));
+      } 
+      
+      console.error('status:', xhr.status);
+      return callback(new Error('Request status: ' + xhr.status));
     }
   };
-  xhr.onerror = function () {
-    callback({
-      error: 'Request error'
-    });
+
+  xhr.onerror = function(err) {
+    console.error('error:', err);
+    return callback(new Error('Request error: ' + err.message));
   };
+
   xhr.send(body && JSON.stringify(body) || null);
 }
 
@@ -59,7 +58,7 @@ function getKey(keyId, callback) {
 
 function getProof(trackingId, callback) {
   var xhr = new XMLHttpRequest();
-   if (trackingId === decodeURIComponent(trackingId)) {
+  if (trackingId === decodeURIComponent(trackingId)) {
     trackingId = encodeURIComponent(trackingId);
   }
   xhr.open('GET', '/api/proof/' + trackingId);
@@ -104,34 +103,42 @@ function processAttachments(upload, event, callback) {
             attachment = Office.context.mailbox.item.attachments[i];
             attachment = attachment._data$p$0 || attachment.$0_0;
 
-            if (attachment !== undefined) {
+            if (attachment) {
                 // I copied this line from the msdn example - not sure why first stringify and then pars the attachment
                 serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
             }
         }
-        handleRequest(xhr, serviceRequest, function(response) {
-          callback(response, event);
+        handleRequest(xhr, serviceRequest, function(err, response) {
+          if (err) {
+            return callback(err);
+          }
+
+          return callback(null, { response: response, event: event });
         });
     }
     else {
-        return showMessage("Could not get callback token: " + asyncResult.error.message, event);
+        return callback(new Error("Could not get callback token: " + asyncResult.error.message));
     }
   });
 }
 
-function storeAttachmentsCallback(response, event) {
-  if (response.error){
-    return showMessage("Error: " + response.error, event);           
+// result: {response, event}
+function storeAttachmentsCallback(err, result) {
+  if (err) {
+    return showMessage("Error: " + err.message, event);           
   }
+
+  var response = result.response;
+  console.log('got response', response);
+  var event = result.event;
+
   var trackingIds = [];
   if (response.attachmentProcessingDetails)
   {
-    for (a = 0; a < response.attachmentProcessingDetails.length; a++ ){
+    for (a = 0; a < response.attachmentProcessingDetails.length; a++ ) {
+
       var ad = response.attachmentProcessingDetails[a];
-      var trackingId = "id_" + ad.hash; 
-      trackingIds.push(encodeURIComponent(trackingId));
       var proof = {
-          trackingId : trackingId,
           proofToEncrypt : {
             url : ad.url,
             sasToken : ad.sasToken,
@@ -142,29 +149,47 @@ function storeAttachmentsCallback(response, event) {
               creatorId : config.userId
           }
       }; 
-      putProof(proof, function(response) {
-        if (response.error || !response.result) {
-          return showMessage(response.error, event);
+
+      putProof(proof, function(err, response) {
+        if (err) {
+          return showMessage(err.message, event);
         }
+
+        trackingIds.push(response.trackingId);
+
+       Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+       return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
       });
     }
   }
-  Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
-  return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
 }
 
-function getFirstAttachmentHash(event, callback){
-  processAttachments(true, event, function(response, event) {
-    var hash = "";
-    if (response.error){
-      showMessage("Error: " + response.error, event);           
+function getFirstAttachmentHash(event, callback) {
+
+  // result: { response: response, event: event }
+  processAttachments(true, event, function(err, result) {
+    if (err) {
+      showMessage("Error: " + err.message, event);
+      return callback(err);
     }
-    if (response.attachmentProcessingDetails) {
-      if (response.attachmentProcessingDetails.length>0){
-        hash = response.attachmentProcessingDetails[0].hash;
-      }
+
+    var response = result.response;
+    var event = result.event;
+  
+    // response from the server
+    if (response.isError) {
+      console.error('error getting first attachment from server:', response.error);
+      return callback(new Error(response.error));
     }
-    callback(hash);
+
+    if (!response.attachmentProcessingDetails || !response.attachmentProcessingDetails.length) {
+      console.error('hash is not available');
+      return callback(new Error('hash not available'));
+    }
+
+    var hash = response.attachmentProcessingDetails[0].hash;
+    return callback(null, { hash: hash });
+
   });
 }
 
@@ -182,16 +207,28 @@ function validateProof(event) {
               var proof = proofs[i].split(endProofString);
               if (proof.length >= 1) {
                 var jsonProof = JSON.parse(proof[0]);
-                getProof(jsonProof[0].trackingId, function(fromChain){
-                  if (fromChain.error || !fromChain.result) {
+                getProof(jsonProof[0].trackingId, function(err, result) {
+                  console.log('get proof from chain:', err, result);
+                  if (err) {
+                    return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
+                  }
+                  
+                  if (!result) {
                     return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId, event); 
-                  }   
-                  var proofFromChain = fromChain.result[0];
+                  }
+
+                  var proofFromChain = result.result[0];
                   var proofToEncryptStr = JSON.stringify(jsonProof[0].encryptedProof);
                   var hash = sha256(proofToEncryptStr);
                   if (proofFromChain.publicProof.encryptedProofHash == hash.toUpperCase()){
                     if (proofFromChain.publicProof.publicProof && proofFromChain.publicProof.publicProof.documentHash){
-                        getFirstAttachmentHash(event, function(hash){
+                        getFirstAttachmentHash(event, function(err, result) {
+                          console.log('retrieving first attachment hash:', err, result);
+                          if (err) {
+                            return showMessage("error retrieving first attachment hash - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
+                          }
+
+                          var hash = result.hash;
                           if (proofFromChain.publicProof.publicProof.documentHash == hash) {
                             return showMessage("Valid proof with attachment for trackingId: " + jsonProof[0].trackingId, event);
                           } 
@@ -235,10 +272,11 @@ function provideProof(event) {
 
 			var body = result.value;
       var trackingId = body;
-			getProof(trackingId, function (response) {
-				if (response.error || !response.result) {
-					return showMessage(response.error, event);
-				}
+			getProof(trackingId, function (err, response) {
+				if (err) {
+					return showMessage(err.message, event);
+        }
+        
         var proofs = response.result;
         var attachments = [];
         for (var i in proofs){
