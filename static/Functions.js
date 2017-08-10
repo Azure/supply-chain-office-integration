@@ -270,16 +270,16 @@ function provideProof(event) {
 
     var body = result.value;
     var trackingId = body.trim();
-    console.log(`providing proof for trackingId: ${trackingId}`);
+    console.log('providing proof for trackingId:', trackingId);
 
     return getProof(trackingId, function (err, response) {
       if (err) {
-        console.error(`error getting proof: ${err.message}`);
+        console.error('error getting proof:', err.message);
         return showMessage(err.message, event);
       }
       
       var proofs = response.result;
-      console.log(`got proofs:`, proofs);
+      console.log('got proofs:', proofs);
 
       var attachments = [];
       for (var i in proofs) {

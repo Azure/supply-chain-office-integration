@@ -5,6 +5,7 @@ process.env.STAMPERY_TOKEN = "65002b66-089a-4aad-eb00-962c5c4e0e59";
 
 var util = require('util');
 var express = require('express');
+var cors = require('express-cors');
 var http = require('http');
 var https = require('https');
 var fs = require('fs');
@@ -35,6 +36,7 @@ else {
   serverOptions.key = fs.readFileSync('./cert/server.key');
 }
 
+app.use(cors());
 app.use(bodyParser.json());
 app.use(expressValidator());
 
