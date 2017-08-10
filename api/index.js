@@ -37,36 +37,6 @@ app.put('/proof', async (req, res) => {
   }
 });
 
-
-app.post('/proof/get', async (req, res) => {
-  
-  try {
-
-    if (!req.body.trackingId) {
-      return res.status(HttpStatus.BAD_REQUEST).json({ error: `trackingId was not provided` });
-    }
-
-    // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
-    var trackingId = req.body.trackingId;
-    var decrypt = req.sanitizeQuery('decrypt').toBoolean();
-
-    var uri = iberaServicesEndpoint + `/api/proof/get?decrypt=${decrypt}`;
-    var result = await request({
-      method: 'POST',
-      uri,
-      body: req.body,
-      json: true
-    });
-
-    console.log(`got response: ${util.inspect(result)}`);
-    res.json({ result });
-  }
-  catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
-  }
-
-});
-
 app.get('/proof/:trackingId', async (req, res) => {
   
   try {
@@ -77,7 +47,7 @@ app.get('/proof/:trackingId', async (req, res) => {
     }
 
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
-    var trackingId = req.params.trackingId.trim();
+    var trackingId = req.params.trackingId;
     if (decodeURIComponent(trackingId) === trackingId) {
       trackingId = encodeURIComponent(trackingId);
     }
