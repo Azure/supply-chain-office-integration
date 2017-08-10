@@ -263,42 +263,51 @@ function validateProof(event) {
 }
 
 function provideProof(event) {
-	// if (Office.context.mailbox.item.subject == "ibera key request")
-	{
-		Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
-			if (result.status === Office.AsyncResultStatus.Failed) {
-				return showMessage(result.error, event);
-			}
+  Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
+    if (result.status === Office.AsyncResultStatus.Failed) {
+      return showMessage(result.error, event);
+    }
 
-			var body = result.value;
-      var trackingId = body;
-			getProof(trackingId, function (err, response) {
-				if (err) {
-					return showMessage(err.message, event);
+    var body = result.value;
+    var trackingId = body.trim();
+    console.log(`providing proof for trackingId: ${trackingId}`);
+
+    return getProof(trackingId, function (err, response) {
+      if (err) {
+        console.error(`error getting proof: ${err.message}`);
+        return showMessage(err.message, event);
+      }
+      
+      var proofs = response.result;
+      console.log(`got proofs:`, proofs);
+
+      var attachments = [];
+      for (var i in proofs) {
+        var proof = proofs[i];
+        if (proof && proof.encryptedProof && proof.encryptedProof.sasToken && proof.encryptedProof.documentName) {
+          attachments.push({
+            type : Office.MailboxEnums.AttachmentType.File,
+            url : proof.encryptedProof.sasToken, 
+            name : proof.encryptedProof.documentName
+          })
         }
-        
-        var proofs = response.result;
-        var attachments = [];
-        for (var i in proofs){
-          var proof = proofs[i];
-          if (proof && proof.encryptedProof && proof.encryptedProof.sasToken && proof.encryptedProof.documentName) {
-            attachments.push({
-              type : Office.MailboxEnums.AttachmentType.File,
-              url : proof.encryptedProof.sasToken, 
-              name : proof.encryptedProof.documentName
-            })
-          }
-        }
-        var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
-        Office.context.mailbox.item.displayReplyForm({
-          'htmlBody' : replyText,
-          'attachments' : attachments
-        });
-        
-        showMessage("Proof have been added for: " + trackingId, event);
-			});
-		});
-	}
+      }
+
+      console.log('attachments: ', attachments);
+
+      var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
+      
+      var opts = {
+        'htmlBody' : replyText,
+        'attachments' : attachments
+      };
+
+      console.log('creating a reply mail with ', JSON.stringify(opts, true, 2));
+      Office.context.mailbox.item.displayReplyForm(opts);
+      
+      showMessage("Proof have been added for: " + trackingId, event);
+    });
+  });
 }
 
 function showMessage(message, event) {
