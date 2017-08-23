@@ -19,17 +19,19 @@ var nconfig = nconf.env().file({ file: envFile });
 
 // centric place to read and parse all configuration values
 var config = {
-  IBERA_SERVICES_ENDPOINT: nconfig.get('IBERA_SERVICES_ENDPOINT')
+  IBERA_SERVICES_ENDPOINT: nconfig.get('IBERA_SERVICES_ENDPOINT'),
+  DOCUMENT_SERVICES_ENDPOINT: nconfig.get('DOCUMENT_SERVICES_ENDPOINT')
+  
 }
 
 
 // validate configuration
 var params = [
-  'IBERA_SERVICES_ENDPOINT'
+  'IBERA_SERVICES_ENDPOINT',
+  'DOCUMENT_SERVICES_ENDPOINT'
 ];
 
 params.forEach(param => validate(param));
-
 
 function validate(param) {
   if (!config[param]) {
