@@ -30,7 +30,9 @@ async function getUserId(userToken){
     return result;
   }
   catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: `could not retrieve userId from user token` });
+    var errorMessage = `Could not retrieve userId from user token: ${userToken}`;
+    console.log(errorMessage);
+    throw new Error(errorMessage);
   }
 }
 
