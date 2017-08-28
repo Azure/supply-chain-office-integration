@@ -11,15 +11,38 @@ var app = express();
 
 const development = process.env.NODE_ENV !== 'production';
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
+const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
+async function getUserId(userToken){
+  try {
+    var uri = documentServicesEndpoint + `/api/user`;
+    var result = await request({
+      method: 'POST',
+      uri,
+      body: { 
+        token : userToken
+      },
+      json: true
+    });
+    console.log(`got response: ${util.inspect(result)}`);
+    return result;
+  }
+  catch (err) {
+    var errorMessage = `Could not retrieve userId from user token: ${userToken}`;
+    console.log(errorMessage);
+    throw new Error(errorMessage);
+  }
+}
 
 app.put('/proof', async (req, res) => {
   
   try {
-
-    // TODO add validations to schema
+    if (!req.headers['user-token']){
+        return res.status(HttpStatus.BAD_REQUEST).json({ error: `user-token request header is missing` });
+    }
+    req.body.userId = await getUserId(req.headers['user-token']);
 
     var uri = iberaServicesEndpoint + `/api/proof`;
     var result = await request({
@@ -45,7 +68,11 @@ app.get('/proof/:trackingId', async (req, res) => {
     if (!errors.isEmpty()) {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
     }
+    if (!req.headers['user-token']){
+        return res.status(HttpStatus.BAD_REQUEST).json({ error: `user-token request header is missing` });
+    }
 
+    var userId = await getUserId(req.headers['user-token']);
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
     var trackingId = req.params.trackingId;
     if (decodeURIComponent(trackingId) === trackingId) {
@@ -54,8 +81,10 @@ app.get('/proof/:trackingId', async (req, res) => {
 
     var decrypt = req.sanitizeQuery('decrypt').toBoolean();
 
-    var path = iberaServicesEndpoint + `/api/proof/${trackingId}?decrypt=${decrypt}`;
-    var result = await request.get(path, { json: true });
+    var path = iberaServicesEndpoint + `/api/proof/${trackingId}?userId=${userId}&decrypt=${decrypt}`;
+    var result = await request.get(path, {
+       json: true 
+    });
 
     console.log(`got response: ${util.inspect(result)}`);
     res.json({ result });
@@ -76,6 +105,9 @@ app.get('/key/:keyId', async (req, res) => {
       return res.status(HttpStatus.BAD_REQUEST).json({ error: `there have been validation errors: ${util.inspect(errors.array())}` });
     }
 
+    if (!req.headers['user-token']){
+        return res.status(HttpStatus.BAD_REQUEST).json({ error: `user-token request header is missing` });
+    }
     
     // keyId is encoded. leave it encoded since we also use it as part of the URL in the request
     var keyId = req.params.keyId;
@@ -83,8 +115,12 @@ app.get('/key/:keyId', async (req, res) => {
       keyId = encodeURIComponent(keyId);
     }
 
-    var path = iberaServicesEndpoint + `/api/key/${keyId}`;
-    var result = await request.get(path, { json: true });
+    var userId =await getUserId(req.headers['user-token']);
+
+    var path = iberaServicesEndpoint + `/api/key/${keyId}?userId=${userId}`;
+    var result = await request.get(path, {
+       json: true 
+    });
 
     console.log(`got response: ${util.inspect(result)}`);
     res.json(result);

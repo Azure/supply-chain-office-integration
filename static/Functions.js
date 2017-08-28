@@ -5,12 +5,6 @@
 Office.initialize = function () {
 };
 
-// TODO:  the following config values need to be set on asettings page
-var config = {
-  userId : "FarmerID100"
-};
-
-
 setTimeout(function(){
   console.log('here');
 }, 3000);
@@ -43,7 +37,10 @@ function putProof(body, callback) {
   var xhr = new XMLHttpRequest();
   xhr.open('PUT', '/api/proof');
   xhr.setRequestHeader('Content-Type', 'application/json');
-  handleRequest(xhr, body, callback);
+  Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+    xhr.setRequestHeader('User-Token', userToken.value);
+    handleRequest(xhr, body, callback);
+  });
 }
 
 function getKey(keyId, callback) {
@@ -53,7 +50,10 @@ function getKey(keyId, callback) {
   }
   xhr.open('GET', '/api/key/'+ keyId);
   xhr.setRequestHeader('Content-Type', 'application/json');
-  handleRequest(xhr, null, callback);
+  Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+    xhr.setRequestHeader('User-Token', userToken.value);
+    handleRequest(xhr, null, callback);
+  });
 }
 
 function getProof(trackingId, callback) {
@@ -62,13 +62,19 @@ function getProof(trackingId, callback) {
     trackingId = encodeURIComponent(trackingId);
   }
   xhr.open('GET', '/api/proof/' + trackingId);
-  handleRequest(xhr, null, callback);
+  Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+    xhr.setRequestHeader('User-Token', userToken.value);
+    handleRequest(xhr, null, callback);
+  });
 }
 
 function getHash(url, callback) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', '/api/hash?url=' + encodeURIComponent(url));
-  handleRequest(xhr, null, callback);
+  Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+    xhr.setRequestHeader('User-Token', userToken.value);
+    handleRequest(xhr, body, callback);
+  });
 }
 
 function storeAttachments(event) {
@@ -86,7 +92,6 @@ function processAttachments(upload, event, callback) {
   serviceRequest.ewsUrl = Office.context.mailbox.ewsUrl;
   serviceRequest.attachments = [];
   serviceRequest.containerName = containerName;
-  serviceRequest.folderName = config.userId;
   serviceRequest.upload = upload;
 
   Office.context.mailbox.getCallbackTokenAsync( function attachmentTokenCallback(asyncResult, userContext) {
@@ -94,26 +99,28 @@ function processAttachments(upload, event, callback) {
         serviceRequest.attachmentToken = asyncResult.value;
         var attachment;
         xhr = new XMLHttpRequest();
-        // xhr.open("POST", "https://localhost:44320/api/Attachment", true);
-        xhr.open("POST", "https://ibera-document-service.azurewebsites.net/api/Attachment", true);
+        xhr.open("POST", clientEnv.documentServiceUrl + "/api/Attachment", true);
         xhr.setRequestHeader("Content-Type", "application/json");
+        Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+          xhr.setRequestHeader('User-Token', userToken.value);
 
-        // Translate the attachment details into a form easily understood by WCF.
-        for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
-            attachment = Office.context.mailbox.item.attachments[i];
-            attachment = attachment._data$p$0 || attachment.$0_0;
+          // Translate the attachment details into a form easily understood by WCF.
+          for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
+              attachment = Office.context.mailbox.item.attachments[i];
+              attachment = attachment._data$p$0 || attachment.$0_0;
 
-            if (attachment) {
-                // I copied this line from the msdn example - not sure why first stringify and then pars the attachment
-                serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
-            }
-        }
-        handleRequest(xhr, serviceRequest, function(err, response) {
-          if (err) {
-            return callback(err);
+              if (attachment) {
+                  // I copied this line from the msdn example - not sure why first stringify and then pars the attachment
+                  serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
+              }
           }
+          handleRequest(xhr, serviceRequest, function(err, response) {
+            if (err) {
+              return callback(err);
+            }
 
-          return callback(null, { response: response, event: event });
+            return callback(null, { response: response, event: event });
+          });
         });
     }
     else {
@@ -145,8 +152,7 @@ function storeAttachmentsCallback(err, result) {
             documentName : ad.name
           },
           publicProof : {
-              documentHash : ad.hash,
-              creatorId : config.userId
+              documentHash : ad.hash
           }
       }; 
 

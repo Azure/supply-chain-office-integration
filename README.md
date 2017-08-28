@@ -34,15 +34,17 @@ $ curl https://localhost:8443/api/key
 ```
 
 
-## configuration 
+## Configuration 
 
 To run locally, copy the file `dev.sample.json` in the `config` folder and create a new file called `dev.private.json`.
 
 Fill in the following values:
 
-`IBERA_SERVICES_ENDPOINT`: The URL for the iBera services service
-
+`IBERA_SERVICES_ENDPOINT`: The URL for the iBera services service - the endpoint needs to support SSL
+`DOCUMENT_SERVICES_ENDPOINT`: The URL for the iBera document service - the endpoint needs to support SSL 
 When deploying to production, fill these values in the environment variables.
+
+Also in `static/client.env.js`, set `documentServiceUrl` to your local document service endpoint.
 
 
 ## Deployment

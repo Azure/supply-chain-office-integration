@@ -1,3 +1,4 @@
 {
-  "IBERA_SERVICES_ENDPOINT": "https://..."
+  "IBERA_SERVICES_ENDPOINT": "https://...",
+  "DOCUMENT_SERVICES_ENDPOINT": "https://..."
 }
