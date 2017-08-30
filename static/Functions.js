@@ -5,11 +5,16 @@
 Office.initialize = function () {
 };
 
+$(function() {
+console.log('JQuery initialized');
+
 setTimeout(function(){
   console.log('here');
 }, 3000);
 
+// TODO move to configuration retrieved from the server
 const containerName = "attachments";
+
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
@@ -77,121 +82,134 @@ function getHash(url, callback) {
   Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
     if (userToken.error) return callback(userToken.error);
     xhr.setRequestHeader('User-Token', userToken.value);
-    handleRequest(xhr, body, callback);
+    handleRequest(xhr, null, callback);
   });
 }
 
-function storeAttachments(event) {
-  processAttachments(true, event, storeAttachmentsCallback);
+function getClientConfiguration(callback) {
+  console.log('getting configuration from server');
+  return $.getJson('/api/config', callback);
+
+/*
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/config');
+  handleRequest(xhr, null, callback);
+  */
 }
 
-function processAttachments(upload, event, callback) {
-  if (Office.context.mailbox.item.attachments == undefined) {
-      return showMessage("Not supported: Attachments are not supported by your Exchange server.", event);
-  } else if (Office.context.mailbox.item.attachments.length == 0) {
-      return showMessage("No attachments: There are no attachments on this item.", event);
-  }
-  var serviceRequest = {};
-  serviceRequest.attachmentToken = "";
-  serviceRequest.ewsUrl = Office.context.mailbox.ewsUrl;
-  serviceRequest.attachments = [];
-  serviceRequest.containerName = containerName;
-  serviceRequest.upload = upload;
+function storeAttachments(event) {
 
-  Office.context.mailbox.getCallbackTokenAsync( function attachmentTokenCallback(asyncResult, userContext) {
-    if (asyncResult.status == "succeeded") {
-      serviceRequest.attachmentToken = asyncResult.value;
-      var attachment;
-      xhr = new XMLHttpRequest();
-      xhr.open("POST", clientEnv.documentServiceUrl + "/api/Attachment", true);
+  return processAttachments(true, function(err, response) {
+    if (err) return showMessage("Error: " + err.message, event);           
+    console.log('got response', response);
+  
+    var trackingIds = [];
+    if (response.attachmentProcessingDetails) {
+      for (i = 0; i < response.attachmentProcessingDetails.length; i++ ) {
+
+        var ad = response.attachmentProcessingDetails[i];
+        var proof = {
+          proofToEncrypt : {
+            url : ad.url,
+            sasToken : ad.sasToken,
+            documentName : ad.name
+          },
+          publicProof : {
+            documentHash : ad.hash
+          }
+        }; 
+  
+        return putProof(proof, function(err, response) {
+          if (err) return showMessage(err.message, event);
+          
+          trackingIds.push(response.trackingId);
+  
+          Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+          return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
+        });
+      }
+    }
+  });
+}
+
+function processAttachments(isUpload, callback) {
+
+  if (!Office.context.mailbox.item.attachments) {
+    return callback(new Error("Not supported: Attachments are not supported by your Exchange server."));
+  }
+
+  if (!Office.context.mailbox.item.attachments.length) {
+    return callback(new Error("No attachments: There are no attachments on this item."));
+  }
+
+  return Office.context.mailbox.getCallbackTokenAsync(function attachmentTokenCallback(attachmentTokenResult) {
+    console.log('getCallbackTokenAsync callback result:', attachmentTokenResult);    
+    if (attachmentTokenResult.error) return callback(attachmentTokenResult.error);
+
+    return getClientConfiguration(function(err, config) {
+      console.log('getClientConfiguration callback result:', err, config);
+      if (err) return callback(err);
+
+
+
+return callback(null, {
+  attachmentProcessingDetails: [
+    {
+      url: 'http://...',
+      sasToken: 'some token',
+      name: 'some name',
+      hash: 'the hash!'
+    }
+  ]
+});
+
+      var body = {};
+      body.ewsUrl = Office.context.mailbox.ewsUrl;
+      body.attachments = [];
+      body.containerName = containerName;
+      body.upload = isUpload;
+      body.attachmentToken = attachmentTokenResult.value;
+
+      var xhr = new XMLHttpRequest();
+
+      xhr.open("POST", config.documentServiceUrl + "/api/Attachment", true);
       xhr.setRequestHeader("Content-Type", "application/json");
-      Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
-        if (userToken.error) return callback(userToken.error);
-        xhr.setRequestHeader('User-Token', userToken.value);
+
+      return Office.context.mailbox.getUserIdentityTokenAsync(function(userTokenResult) {
+        console.log('getUserIdentityTokenAsync callback result:', userTokenResult);
+
+        if (userTokenResult.error) return callback(userTokenResult.error);
+        xhr.setRequestHeader('User-Token', userTokenResult.value);
 
         // Translate the attachment details into a form easily understood by WCF.
         for (i = 0; i < Office.context.mailbox.item.attachments.length; i++) {
-          attachment = Office.context.mailbox.item.attachments[i];
+          var attachment = Office.context.mailbox.item.attachments[i];
           attachment = attachment._data$p$0 || attachment.$0_0;
 
           if (attachment) {
             // I copied this line from the msdn example - not sure why first stringify and then pars the attachment
-            serviceRequest.attachments[i] = JSON.parse(JSON.stringify(attachment));
+            body.attachments[i] = JSON.parse(JSON.stringify(attachment));
           }
         }
-        handleRequest(xhr, serviceRequest, function(err, response) {
-          if (err) {
-            return callback(err);
-          }
 
-          return callback(null, { response: response, event: event });
+        return handleRequest(xhr, body, function(err, response) {
+          if (err) return callback(err);
+
+          // in this case the document service might return a result that contains an error, so also need to check this specifically
+          if (response.isError) return callback(new Error('error uploading document: ' + response.message));
+
+          return callback(null, response);
         });
       });
-    }
-    else {
-      return callback(new Error("Could not get callback token: " + asyncResult.error.message));
-    }
+    });
   });
 }
 
-// result: {response, event}
-function storeAttachmentsCallback(err, result) {
-  if (err) {
-    return showMessage("Error: " + err.message, event);           
-  }
+function getFirstAttachmentHash(callback) {
 
-  var response = result.response;
-  console.log('got response', response);
-  var event = result.event;
-
-  var trackingIds = [];
-  if (response.attachmentProcessingDetails)
-  {
-    for (a = 0; a < response.attachmentProcessingDetails.length; a++ ) {
-
-      var ad = response.attachmentProcessingDetails[a];
-      var proof = {
-        proofToEncrypt : {
-          url : ad.url,
-          sasToken : ad.sasToken,
-          documentName : ad.name
-        },
-        publicProof : {
-          documentHash : ad.hash
-        }
-      }; 
-
-      putProof(proof, function(err, response) {
-        if (err) {
-          return showMessage(err.message, event);
-        }
-
-        trackingIds.push(response.trackingId);
-
-        Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
-        return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
-      });
-    }
-  }
-}
-
-function getFirstAttachmentHash(event, callback) {
-
-  // result: { response: response, event: event }
-  processAttachments(true, event, function(err, result) {
-    if (err) {
-      showMessage("Error: " + err.message, event);
-      return callback(err);
-    }
-
-    var response = result.response;
-    var event = result.event;
-  
-    // response from the server
-    if (response.isError) {
-      console.error('error getting first attachment from server:', response.error);
-      return callback(new Error(response.error));
-    }
+  return processAttachments(true, function(err, response) {
+    if (err) return callback(err);
+    console.log('got response', response);    
 
     if (!response.attachmentProcessingDetails || !response.attachmentProcessingDetails.length) {
       console.error('hash is not available');
@@ -233,7 +251,7 @@ function validateProof(event) {
                   var hash = sha256(proofToEncryptStr);
                   if (proofFromChain.publicProof.encryptedProofHash == hash.toUpperCase()){
                     if (proofFromChain.publicProof.publicProof && proofFromChain.publicProof.publicProof.documentHash){
-                      getFirstAttachmentHash(event, function(err, result) {
+                      getFirstAttachmentHash(function(err, result) {
                         console.log('retrieving first attachment hash:', err, result);
                         if (err) {
                           return showMessage("error retrieving first attachment hash - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
@@ -336,6 +354,8 @@ function showMessage(message, event) {
     }
   });
 }
+
+});
 
 /*
   MIT License:

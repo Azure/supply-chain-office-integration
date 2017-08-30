@@ -15,7 +15,11 @@ const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-async function getUserId(userToken){
+
+
+async function getUserId(userToken) {
+
+  return 'userId1';
   try {
     var uri = documentServicesEndpoint + `/api/user`;
     var result = await request({
@@ -36,12 +40,29 @@ async function getUserId(userToken){
   }
 }
 
+
+app.get('/config', async (req, res) => {
+  
+  try {
+    var result = {
+      documentServiceUrl: config.DOCUMENT_SERVICES_ENDPOINT
+    }
+
+    console.log(`sending configuration: ${util.inspect(result)}`);
+    res.json(result);
+  }
+  catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+  }
+});
+
 app.put('/proof', async (req, res) => {
   
   try {
-    if (!req.headers['user-token']){
+    if (!req.headers['user-token']) {
         return res.status(HttpStatus.BAD_REQUEST).json({ error: `user-token request header is missing` });
     }
+
     req.body.userId = await getUserId(req.headers['user-token']);
 
     var uri = iberaServicesEndpoint + `/api/proof`;
