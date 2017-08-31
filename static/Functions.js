@@ -1,12 +1,14 @@
 // Copyright (c) Microsoft. All rights reserved. Licensed under the MIT license.
 // See full license at the bottom of this file.
 
+
+
 // The initialize function is required for all add-ins.
 Office.initialize = function () {
+  jQuery(document).ready(function() {
+    console.log('JQuery is initialized', jQuery, $);
+  });
 };
-
-$(function() {
-console.log('JQuery initialized');
 
 setTimeout(function(){
   console.log('here');
@@ -17,6 +19,32 @@ const containerName = "attachments";
 
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
+
+
+function httpRequest(url, method, data, callback) {
+  
+  if (typeof data === 'function') {
+    callback = data;
+    data = null;
+  }
+
+  var opts = {
+    type: method,
+    url: url,
+    success: function (data, textStatus) {
+      console.log('got data', data, textStatus);
+      return callback(null, data);
+    },
+    error: function (xhr, textStatus, errorThrown) {
+      console.log('got error:', textStatus, errorThrown);
+      return callback(new Error('error invoking http request:' + textStatus));
+    }
+  };
+
+  if (data) opts.data = data;
+
+  return $.ajax(opts);
+}
 
 function handleRequest(xhr, body, callback) {
   xhr.onreadystatechange = function () {
@@ -88,13 +116,7 @@ function getHash(url, callback) {
 
 function getClientConfiguration(callback) {
   console.log('getting configuration from server');
-  return $.getJson('/api/config', callback);
-
-/*
-  var xhr = new XMLHttpRequest();
-  xhr.open('GET', '/api/config');
-  handleRequest(xhr, null, callback);
-  */
+  return httpRequest('/api/config', 'GET', callback);
 }
 
 function storeAttachments(event) {
@@ -126,6 +148,8 @@ function storeAttachments(event) {
   
           Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
           return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
+          
+          event.completed();
         });
       }
     }
@@ -133,6 +157,8 @@ function storeAttachments(event) {
 }
 
 function processAttachments(isUpload, callback) {
+
+console.log('processAttachments');
 
   if (!Office.context.mailbox.item.attachments) {
     return callback(new Error("Not supported: Attachments are not supported by your Exchange server."));
@@ -355,7 +381,6 @@ function showMessage(message, event) {
   });
 }
 
-});
 
 /*
   MIT License:
