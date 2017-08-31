@@ -21,27 +21,18 @@ const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
 
-function httpRequest(url, method, data, callback) {
-  
-  if (typeof data === 'function') {
-    callback = data;
-    data = null;
+function httpRequest(opts, callback) {
+  console.log('calling', opts.method, opts.url);
+
+  opts.success = function (data, textStatus) {
+    console.log('got data', data, textStatus);
+    return callback(null, data);
   }
-
-  var opts = {
-    type: method,
-    url: url,
-    success: function (data, textStatus) {
-      console.log('got data', data, textStatus);
-      return callback(null, data);
-    },
-    error: function (xhr, textStatus, errorThrown) {
-      console.log('got error:', textStatus, errorThrown);
-      return callback(new Error('error invoking http request:' + textStatus));
-    }
-  };
-
-  if (data) opts.data = data;
+  
+  opts.error = function (xhr, textStatus, errorThrown) {
+    console.log('got error:', textStatus, errorThrown);
+    return callback(new Error('error invoking http request:' + textStatus));
+  }
 
   return $.ajax(opts);
 }
@@ -91,7 +82,26 @@ function getKey(keyId, callback) {
   });
 }
 
-function getProof(trackingId, callback) {
+function getProof(trackingId, cb) {
+
+
+  return getUserIdentityToken(function(err, token) {
+    if (err) return cb(err);
+
+    if (trackingId === decodeURIComponent(trackingId)) {
+      trackingId = encodeURIComponent(trackingId);
+    }
+
+    return httpRequest({ 
+      method: 'GET', 
+      url: '/api/proof/' + trackingId, 
+      headers: { 'User-Token': token } 
+    }, cb);
+    
+  });
+
+  /*
+
   var xhr = new XMLHttpRequest();
   if (trackingId === decodeURIComponent(trackingId)) {
     trackingId = encodeURIComponent(trackingId);
@@ -102,6 +112,7 @@ function getProof(trackingId, callback) {
     xhr.setRequestHeader('User-Token', userToken.value);
     handleRequest(xhr, null, callback);
   });
+  */
 }
 
 function getHash(url, callback) {
@@ -114,9 +125,16 @@ function getHash(url, callback) {
   });
 }
 
-function getClientConfiguration(callback) {
+function getUserIdentityToken(cb) {
+  return Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
+    if (userToken.error) return cb(userToken.error);
+    return cb(null, userToken.value);
+  });
+}
+
+function getClientConfiguration(cb) {
   console.log('getting configuration from server');
-  return httpRequest('/api/config', 'GET', callback);
+  return httpRequest({ method: 'GET', url: '/api/config' }, cb);
 }
 
 function storeAttachments(event) {
@@ -173,9 +191,7 @@ console.log('processAttachments');
     if (attachmentTokenResult.error) return callback(attachmentTokenResult.error);
 
     return getClientConfiguration(function(err, config) {
-      console.log('getClientConfiguration callback result:', err, config);
       if (err) return callback(err);
-
 
 
 return callback(null, {
