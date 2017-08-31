@@ -189,6 +189,7 @@ function processAttachments(isUpload, cb) {
 
         // **************************************************************************************************
         // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
+        /*
         return cb(null, {
           attachmentProcessingDetails: [
             {
@@ -199,6 +200,7 @@ function processAttachments(isUpload, cb) {
             }
           ]
         });
+        */
         // **************************************************************************************************
 
 
