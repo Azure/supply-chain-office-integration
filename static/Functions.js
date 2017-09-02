@@ -208,7 +208,7 @@ function processAttachments(isUpload, cb) {
           url: config.documentServiceUrl + "/api/Attachment",
           type: 'POST',
           contentType: "application/json; charset=utf-8",          
-          data: data,          
+          data: JSON.stringify(data),          
           dataType: 'json',
           headers: { 'User-Token': token },
         }, function(err, response){
