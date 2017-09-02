@@ -19,11 +19,9 @@ async function getUserId(userToken){
   try {
     var uri = documentServicesEndpoint + `/api/user`;
     var result = await request({
-      method: 'POST',
+      method: 'GET',
       uri,
-      body: { 
-        token : userToken
-      },
+      headers: { 'User-Token': userToken }, 
       json: true
     });
     console.log(`got response: ${util.inspect(result)}`);
