@@ -1,6 +1,7 @@
 ## Running in localhost
 
 Before running for the first time, generate a certificate and a key with the script borrowed from [here](https://github.com/OfficeDev/Office-Add-in-Nodejs-ServerAuth/blob/7d125dd2862c629ee10baddffe981e84f0ed3b2d/ss_certgen.sh).
+Put the `server.crt` and the `server.key` file into the `.\cert` folder.
 
 On Linux, Mac and Git Bash for Windows
 
@@ -25,7 +26,11 @@ To start the server:
 $ npm start
 ```
 
-Open Web browser https://localhost:8443/ and make the certificate trusted by adding it to the trusted root authorities.
+Open Web browser https://localhost:8443/ and make the certificate trusted by adding it to the trusted root authorities. 
+Also [enable localhost deguging on Edge](https://blogs.msdn.microsoft.com/msgulfcommunity/2015/07/01/how-to-debug-localhost-on-microsoft-edge/): 
+```
+CheckNetIsolation LoopbackExempt -a -n="Microsoft.MicrosoftEdge_8wekyb3d8bbwe"
+```
 
 To test that the REST API is accessible and working, you can issue a request to the ping endpoint and expect a hash to be returned:
 

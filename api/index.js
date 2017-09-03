@@ -19,7 +19,6 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 async function getUserId(userToken) {
 
-  return 'userId1';
   try {
     var uri = documentServicesEndpoint + `/api/user`;
     var result = await request({
