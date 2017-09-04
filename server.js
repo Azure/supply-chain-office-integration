@@ -70,8 +70,7 @@ app.get('/manifest.xml', async (req, res) => {
 		// replace all occurences of the dev value with the actual value from the configuration/environment variable
 		content = content.replace(new RegExp('https://localhost:8443', 'g'), config.OUTLOOK_SERVICE_ENDPOINT);
 		
-		res.header('content-type', 'application/xml');
-		return res.end(content);
+		return res.header('content-type', 'application/xml').end(content);
 	}
 	catch(err) {
 		console.error(`error rendering manifest.xml file: ${err.message}`);
