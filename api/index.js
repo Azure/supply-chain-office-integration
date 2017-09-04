@@ -9,13 +9,8 @@ var config = require('../config');
 
 var app = express();
 
-const development = process.env.NODE_ENV !== 'production';
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
 const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-
 
 async function getUserId(userToken) {
 

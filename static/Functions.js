@@ -35,67 +35,67 @@ function httpRequest(opts, cb) {
   return $.ajax(opts);
 }
 
-function putProof(proof, cb) {
-  console.log('adding proof:', proof);  
+function httpRequestWithAuthToken(opts, cb) {
+
   return getUserIdentityToken(function(err, token) {
     if (err) return cb(err);
 
-    return httpRequest({ 
-      method: 'PUT', 
-      contentType: "application/json; charset=utf-8",      
-      url: '/api/proof',
-      data: JSON.stringify(proof), 
-      dataType: 'json',
-      headers: { 'User-Token': token } 
-    }, cb);
+    opts.headers = opts.headers || {};
+    if (!opts.headers['User-Token']) {
+      opts.headers['User-Token'] = token; 
+    }
+
+    return httpRequest(opts, cb);
   });
+}
+
+
+
+function putProof(proof, cb) {
+  console.log('adding proof:', proof);
+
+  return httpRequestWithAuthToken({ 
+    method: 'PUT', 
+    contentType: "application/json; charset=utf-8",      
+    url: '/api/proof',
+    data: JSON.stringify(proof), 
+    dataType: 'json'
+  }, cb);
 }
 
 function getKey(keyId, cb) {
   console.log('getting key for keyId', keyId);  
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
 
-    if (keyId === decodeURIComponent(keyId)) {
-      keyId = encodeURIComponent(keyId);
-    }
+  if (keyId === decodeURIComponent(keyId)) {
+    keyId = encodeURIComponent(keyId);
+  }
 
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/key/' + keyId, 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequestWithAuthToken({ 
+    method: 'GET', 
+    url: '/api/key/' + keyId 
+  }, cb);
 }
 
 function getProof(trackingId, cb) {
   console.log('getting proof for trackingId', trackingId);  
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
+ 
+  if (trackingId === decodeURIComponent(trackingId)) {
+    trackingId = encodeURIComponent(trackingId);
+  }
 
-    if (trackingId === decodeURIComponent(trackingId)) {
-      trackingId = encodeURIComponent(trackingId);
-    }
-
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/proof/' + trackingId, 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequestWithAuthToken({ 
+    method: 'GET', 
+    url: '/api/proof/' + trackingId
+  }, cb);
 }
 
 function getHash(url, cb) {
   console.log('getting hash for url', url);
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
 
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/hash?url=' + encodeURIComponent(url), 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequestWithAuthToken({ 
+    method: 'GET', 
+    url: '/api/hash?url=' + encodeURIComponent(url)
+  }, cb);
 }
 
 function getUserIdentityToken(cb) {
@@ -107,7 +107,11 @@ function getUserIdentityToken(cb) {
 
 function getClientConfiguration(cb) {
   console.log('getting configuration from server');
-  return httpRequest({ method: 'GET', url: '/api/config' }, cb);
+  
+  return httpRequestWithAuthToken({ 
+    method: 'GET', 
+    url: '/api/config' 
+  }, cb);
 }
 
 function storeAttachments(event) {
