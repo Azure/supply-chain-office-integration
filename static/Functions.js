@@ -107,7 +107,7 @@ function getUserIdentityToken(cb) {
 
 function getClientConfiguration(cb) {
   console.log('getting configuration from server');
-  
+
   return httpRequestWithAuthToken({ 
     method: 'GET', 
     url: '/api/config' 
@@ -210,7 +210,7 @@ function processAttachments(isUpload, cb) {
 
         return httpRequest({
           url: config.documentServiceUrl + "/api/Attachment",
-          type: 'POST',
+          method: 'POST',
           contentType: "application/json; charset=utf-8",          
           data: JSON.stringify(data),          
           dataType: 'json',
