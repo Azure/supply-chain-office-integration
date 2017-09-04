@@ -20,23 +20,8 @@ const endProofString = "-----END PROOF-----";
 
 
 function httpRequest(opts, cb) {
-  console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
 
-  opts.success = function (data, textStatus) {
-    console.log('got data:', data, textStatus);
-    return cb(null, data);
-  }
-  
-  opts.error = function (xhr, textStatus, errorThrown) {
-    console.log('got error:', textStatus, errorThrown);
-    return cb(new Error('error invoking http request:' + textStatus));
-  }
-
-  return $.ajax(opts);
-}
-
-function httpRequestWithAuthToken(opts, cb) {
-
+  // get user token, add to headers and invoke the http request 
   return getUserIdentityToken(function(err, token) {
     if (err) return cb(err);
 
@@ -45,16 +30,27 @@ function httpRequestWithAuthToken(opts, cb) {
       opts.headers['User-Token'] = token; 
     }
 
-    return httpRequest(opts, cb);
+    console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
+
+    opts.success = function (data, textStatus) {
+      console.log('got data:', data, textStatus);
+      return cb(null, data);
+    }
+    
+    opts.error = function (xhr, textStatus, errorThrown) {
+      console.log('got error:', textStatus, errorThrown);
+      return cb(new Error('error invoking http request:' + textStatus));
+    }
+
+    return $.ajax(opts);
+
   });
 }
-
-
 
 function putProof(proof, cb) {
   console.log('adding proof:', proof);
 
-  return httpRequestWithAuthToken({ 
+  return httpRequest({ 
     method: 'PUT', 
     contentType: "application/json; charset=utf-8",      
     url: '/api/proof',
@@ -70,7 +66,7 @@ function getKey(keyId, cb) {
     keyId = encodeURIComponent(keyId);
   }
 
-  return httpRequestWithAuthToken({ 
+  return httpRequest({ 
     method: 'GET', 
     url: '/api/key/' + keyId 
   }, cb);
@@ -83,7 +79,7 @@ function getProof(trackingId, cb) {
     trackingId = encodeURIComponent(trackingId);
   }
 
-  return httpRequestWithAuthToken({ 
+  return httpRequest({ 
     method: 'GET', 
     url: '/api/proof/' + trackingId
   }, cb);
@@ -92,7 +88,7 @@ function getProof(trackingId, cb) {
 function getHash(url, cb) {
   console.log('getting hash for url', url);
 
-  return httpRequestWithAuthToken({ 
+  return httpRequest({ 
     method: 'GET', 
     url: '/api/hash?url=' + encodeURIComponent(url)
   }, cb);
@@ -108,7 +104,7 @@ function getUserIdentityToken(cb) {
 function getClientConfiguration(cb) {
   console.log('getting configuration from server');
 
-  return httpRequestWithAuthToken({ 
+  return httpRequest({ 
     method: 'GET', 
     url: '/api/config' 
   }, cb);
@@ -187,45 +183,38 @@ function processAttachments(isUpload, cb) {
         }
       }
 
-      return getUserIdentityToken(function(err, token) {
-        if (err) return cb(err);
+      // **************************************************************************************************
+      // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
+      /*
+      return cb(null, {
+        attachmentProcessingDetails: [
+          {
+            url: 'http://...',
+            sasToken: 'some token',
+            name: 'some name',
+            hash: 'the hash!'
+          }
+        ]
+      });
+      */
+      // **************************************************************************************************
 
 
-        // **************************************************************************************************
-        // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
-        /*
-        return cb(null, {
-          attachmentProcessingDetails: [
-            {
-              url: 'http://...',
-              sasToken: 'some token',
-              name: 'some name',
-              hash: 'the hash!'
-            }
-          ]
-        });
-        */
-        // **************************************************************************************************
+      return httpRequest({
+        url: config.documentServiceUrl + "/api/Attachment",
+        method: 'POST',
+        contentType: "application/json; charset=utf-8",          
+        data: JSON.stringify(data),          
+        dataType: 'json',
+      }, function(err, response) {
+          if (err) return cb(err);
+        
+          // in this case the document service might return a result that contains an error, so also need to check this specifically
+          // TODO: revisit api on document service after rewriting in Node.js.
+          // if there's an error it should send back a statusCode != 200 to indicate that
+          if (response.isError) return cb(new Error('error uploading document: ' + response.message));
 
-
-        return httpRequest({
-          url: config.documentServiceUrl + "/api/Attachment",
-          method: 'POST',
-          contentType: "application/json; charset=utf-8",          
-          data: JSON.stringify(data),          
-          dataType: 'json',
-          headers: { 'User-Token': token },
-        }, function(err, response){
-            if (err) return cb(err);
-          
-            // in this case the document service might return a result that contains an error, so also need to check this specifically
-            // TODO: revisit api on document service after rewriting in Node.js.
-            // if there's an error it should send back a statusCode != 200 to indicate that
-            if (response.isError) return cb(new Error('error uploading document: ' + response.message));
-  
-            return cb(null, response);
-        });
-
+          return cb(null, response);
       });
     });
   });
