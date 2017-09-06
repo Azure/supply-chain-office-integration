@@ -39,7 +39,9 @@ function httpRequest(opts, cb) {
     
     opts.error = function (xhr, textStatus, errorThrown) {
       console.log('got error:', textStatus, errorThrown);
-      return cb(new Error('error invoking http request:' + textStatus));
+      var msg = xhr.status === 404 ? 'requested resource not found' : 'error invoking http request';
+      msg += ': ' + errorThrown;
+      return cb(new Error(msg));
     }
 
     return $.ajax(opts);

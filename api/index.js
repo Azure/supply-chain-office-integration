@@ -95,9 +95,18 @@ app.get('/proof/:trackingId', async (req, res) => {
     var decrypt = req.sanitizeQuery('decrypt').toBoolean();
 
     var path = iberaServicesEndpoint + `/api/proof/${trackingId}?userId=${userId}&decrypt=${decrypt}`;
-    var result = await request.get(path, {
-       json: true 
-    });
+    
+    try {
+      var result = await request.get(path, {
+        json: true 
+      });
+    }
+    catch (err) {
+      if (err.statusCode === HttpStatus.NOT_FOUND) {
+        return res.status(HttpStatus.NOT_FOUND).json(err.error);        
+      }
+      throw err;
+    }
 
     console.log(`got response: ${util.inspect(result)}`);
     res.json({ result });
