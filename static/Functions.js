@@ -41,6 +41,7 @@ function httpRequest(opts, cb) {
       console.log('got error:', textStatus, errorThrown);
       var msg = 'error invoking http request';
       
+      // override message if we got an error message from the server
       var response;
       try {
         response = JSON.parse(xhr.responseText);
@@ -50,7 +51,7 @@ function httpRequest(opts, cb) {
       }
 
       if (response && response.error) {
-        msg += ': ' + response.error;
+        msg = response.error;
       }
       
       return cb(new Error(msg));

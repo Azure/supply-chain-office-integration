@@ -86,6 +86,8 @@ app.get('/proof/:trackingId', async (req, res) => {
     }
 
     var userId = await getUserId(req.headers['user-token']);
+
+
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
     var trackingId = req.params.trackingId;
     if (decodeURIComponent(trackingId) === trackingId) {
@@ -103,8 +105,10 @@ app.get('/proof/:trackingId', async (req, res) => {
     }
     catch (err) {
       if (err.statusCode === HttpStatus.NOT_FOUND) {
+        // pass on the error we got from the services api
         return res.status(HttpStatus.NOT_FOUND).json(err.error);        
       }
+      
       throw err;
     }
 
