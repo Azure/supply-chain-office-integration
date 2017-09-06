@@ -39,8 +39,20 @@ function httpRequest(opts, cb) {
     
     opts.error = function (xhr, textStatus, errorThrown) {
       console.log('got error:', textStatus, errorThrown);
-      var msg = xhr.status === 404 ? 'requested resource not found' : 'error invoking http request';
-      msg += ': ' + errorThrown;
+      var msg = 'error invoking http request';
+      
+      var response;
+      try {
+        response = JSON.parse(xhr.responseText);
+      }
+      catch(err) {
+        console.warn('error parsing object: ', xhr.responseText);
+      }
+
+      if (response && response.error) {
+        msg += ': ' + response.error;
+      }
+      
       return cb(new Error(msg));
     }
 
