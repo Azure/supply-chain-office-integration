@@ -329,7 +329,7 @@ function provideProof(event) {
       return showMessage(result.error, event);
     }
 
-    var guids = getGuidsFromText(result.value);
+    var guids = extractGuidsFromText(result.value);
     if (!guids.length) {
       return showMessage('tracking id (guid) was not found in mail body');
     }
@@ -375,20 +375,19 @@ function provideProof(event) {
   });
 }
 
-function getGuidsFromText(text) {
-  var guidRegex = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
-  var words = text.split(' ');
-  var guids = [];
-  $.each(words, function(index, word) {
-    word = word.trim();
-    // TODO clean words, remove all kinf of possible charachters like [], (), :, etc
-    var matches = word.match(new RegExp(guidRegex));
-    if (matches && matches.length) {
-      guids.push(matches[0]);
-    }
-  });
+function extractGuidsFromText(text) {
+  var guidRegex = new RegExp("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+  var guidLength = 36;
+  
+  var index, guids = [];
+  while ((index = text.search(guidRegex)) > -1) {
+    var guid = text.substr(index, guidLength);
+    text = text.substr(index + guidLength);
+    guids.push(guid);
+  }
   return guids;
 }
+
 
 function showMessage(message, event) {
 	Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
