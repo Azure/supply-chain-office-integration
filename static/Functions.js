@@ -20,82 +20,93 @@ const endProofString = "-----END PROOF-----";
 
 
 function httpRequest(opts, cb) {
-  console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
 
-  opts.success = function (data, textStatus) {
-    console.log('got data:', data, textStatus);
-    return cb(null, data);
-  }
-  
-  opts.error = function (xhr, textStatus, errorThrown) {
-    console.log('got error:', textStatus, errorThrown);
-    return cb(new Error('error invoking http request:' + textStatus));
-  }
-
-  return $.ajax(opts);
-}
-
-function putProof(proof, cb) {
-  console.log('adding proof:', proof);  
+  // get user token, add to headers and invoke the http request 
   return getUserIdentityToken(function(err, token) {
     if (err) return cb(err);
 
-    return httpRequest({ 
-      method: 'PUT', 
-      contentType: "application/json; charset=utf-8",      
-      url: '/api/proof',
-      data: JSON.stringify(proof), 
-      dataType: 'json',
-      headers: { 'User-Token': token } 
-    }, cb);
+    opts.headers = opts.headers || {};
+    if (!opts.headers['User-Token']) {
+      opts.headers['User-Token'] = token; 
+    }
+
+    console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
+
+    opts.success = function (data, textStatus) {
+      console.log('got data:', data, textStatus);
+      return cb(null, data);
+    }
+    
+    opts.error = function (xhr, textStatus, errorThrown) {
+      console.log('got error:', textStatus, errorThrown);
+      var msg = 'error invoking http request';
+      
+      // override message if we got an error message from the server
+      var response;
+      try {
+        response = JSON.parse(xhr.responseText);
+      }
+      catch(err) {
+        console.warn('error parsing object: ', xhr.responseText);
+      }
+
+      if (response && response.error) {
+        msg = response.error;
+      }
+      
+      return cb(new Error(msg));
+    }
+
+    return $.ajax(opts);
+
   });
+}
+
+function putProof(proof, cb) {
+  console.log('adding proof:', proof);
+
+  return httpRequest({ 
+    method: 'PUT', 
+    contentType: "application/json; charset=utf-8",      
+    url: '/api/proof',
+    data: JSON.stringify(proof), 
+    dataType: 'json'
+  }, cb);
 }
 
 function getKey(keyId, cb) {
   console.log('getting key for keyId', keyId);  
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
 
-    if (keyId === decodeURIComponent(keyId)) {
-      keyId = encodeURIComponent(keyId);
-    }
+  if (keyId === decodeURIComponent(keyId)) {
+    keyId = encodeURIComponent(keyId);
+  }
 
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/key/' + keyId, 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequest({ 
+    method: 'GET', 
+    url: '/api/key/' + keyId 
+  }, cb);
 }
 
 function getProof(trackingId, cb) {
   console.log('getting proof for trackingId', trackingId);  
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
+ 
+  if (trackingId === decodeURIComponent(trackingId)) {
+    trackingId = encodeURIComponent(trackingId);
+  }
 
-    if (trackingId === decodeURIComponent(trackingId)) {
-      trackingId = encodeURIComponent(trackingId);
-    }
-
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/proof/' + trackingId, 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequest({ 
+    method: 'GET', 
+    url: '/api/proof/' + trackingId
+  }, cb);
 }
 
 function getHash(url, cb) {
   console.log('getting hash for url', url);
-  return getUserIdentityToken(function(err, token) {
-    if (err) return cb(err);
 
-    return httpRequest({ 
-      method: 'GET', 
-      url: '/api/hash?url=' + encodeURIComponent(url), 
-      headers: { 'User-Token': token } 
-    }, cb);
-  });
+  return httpRequest({ 
+    method: 'GET', 
+    url: '/api/hash?url=' + encodeURIComponent(url)
+  }, cb);
 }
 
 function getUserIdentityToken(cb) {
@@ -107,7 +118,11 @@ function getUserIdentityToken(cb) {
 
 function getClientConfiguration(cb) {
   console.log('getting configuration from server');
-  return httpRequest({ method: 'GET', url: '/api/config' }, cb);
+
+  return httpRequest({ 
+    method: 'GET', 
+    url: '/api/config' 
+  }, cb);
 }
 
 function storeAttachments(event) {
@@ -183,45 +198,38 @@ function processAttachments(isUpload, cb) {
         }
       }
 
-      return getUserIdentityToken(function(err, token) {
-        if (err) return cb(err);
+      // **************************************************************************************************
+      // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
+      /*
+      return cb(null, {
+        attachmentProcessingDetails: [
+          {
+            url: 'http://...',
+            sasToken: 'some token',
+            name: 'some name',
+            hash: 'the hash!'
+          }
+        ]
+      });
+      */
+      // **************************************************************************************************
 
 
-        // **************************************************************************************************
-        // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
-        /*
-        return cb(null, {
-          attachmentProcessingDetails: [
-            {
-              url: 'http://...',
-              sasToken: 'some token',
-              name: 'some name',
-              hash: 'the hash!'
-            }
-          ]
-        });
-        */
-        // **************************************************************************************************
+      return httpRequest({
+        url: config.documentServiceUrl + "/api/Attachment",
+        method: 'POST',
+        contentType: "application/json; charset=utf-8",          
+        data: JSON.stringify(data),          
+        dataType: 'json',
+      }, function(err, response) {
+          if (err) return cb(err);
+        
+          // in this case the document service might return a result that contains an error, so also need to check this specifically
+          // TODO: revisit api on document service after rewriting in Node.js.
+          // if there's an error it should send back a statusCode != 200 to indicate that
+          if (response.isError) return cb(new Error('error uploading document: ' + response.message));
 
-
-        return httpRequest({
-          url: config.documentServiceUrl + "/api/Attachment",
-          type: 'POST',
-          contentType: "application/json; charset=utf-8",          
-          data: JSON.stringify(data),          
-          dataType: 'json',
-          headers: { 'User-Token': token },
-        }, function(err, response){
-            if (err) return cb(err);
-          
-            // in this case the document service might return a result that contains an error, so also need to check this specifically
-            // TODO: revisit api on document service after rewriting in Node.js.
-            // if there's an error it should send back a statusCode != 200 to indicate that
-            if (response.isError) return cb(new Error('error uploading document: ' + response.message));
-  
-            return cb(null, response);
-        });
-
+          return cb(null, response);
       });
     });
   });
@@ -321,8 +329,12 @@ function provideProof(event) {
       return showMessage(result.error, event);
     }
 
-    var body = result.value;
-    var trackingId = body.trim();
+    var guids = extractGuidsFromText(result.value);
+    if (!guids.length) {
+      return showMessage('tracking id (guid) was not found in mail body');
+    }
+
+    var trackingId = guids[0];
     console.log('providing proof for trackingId:', trackingId);
 
     return getProof(trackingId, function(err, response) {
@@ -362,6 +374,20 @@ function provideProof(event) {
     });
   });
 }
+
+function extractGuidsFromText(text) {
+  var guidRegex = new RegExp("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
+  var guidLength = 36;
+  
+  var index, guids = [];
+  while ((index = text.search(guidRegex)) > -1) {
+    var guid = text.substr(index, guidLength);
+    text = text.substr(index + guidLength);
+    guids.push(guid);
+  }
+  return guids;
+}
+
 
 function showMessage(message, event) {
 	Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {

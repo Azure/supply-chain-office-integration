@@ -9,13 +9,8 @@ var config = require('../config');
 
 var app = express();
 
-const development = process.env.NODE_ENV !== 'production';
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
 const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
-
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
-
-
 
 async function getUserId(userToken) {
 
@@ -91,6 +86,8 @@ app.get('/proof/:trackingId', async (req, res) => {
     }
 
     var userId = await getUserId(req.headers['user-token']);
+
+
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
     var trackingId = req.params.trackingId;
     if (decodeURIComponent(trackingId) === trackingId) {
@@ -100,9 +97,20 @@ app.get('/proof/:trackingId', async (req, res) => {
     var decrypt = req.sanitizeQuery('decrypt').toBoolean();
 
     var path = iberaServicesEndpoint + `/api/proof/${trackingId}?userId=${userId}&decrypt=${decrypt}`;
-    var result = await request.get(path, {
-       json: true 
-    });
+    
+    try {
+      var result = await request.get(path, {
+        json: true 
+      });
+    }
+    catch (err) {
+      if (err.statusCode === HttpStatus.NOT_FOUND) {
+        // pass on the error we got from the services api
+        return res.status(HttpStatus.NOT_FOUND).json(err.error);        
+      }
+      
+      throw err;
+    }
 
     console.log(`got response: ${util.inspect(result)}`);
     res.json({ result });

@@ -14,14 +14,17 @@ var bodyParser = require('body-parser');
 var expressValidator = require('express-validator');
 var HttpStatus = require('http-status-codes');
 
+var config = require('./config');
+var utils = require('./utils');
 var api = require('./api');
 
+ // changing the port to anything other than 8443 -> please update 'static/schema.xml' file and also in the '/manifest.xml' http handler below
 var port = process.env.PORT || 8443;
-var isProd = process.env.NODE_ENV === 'production';
+
 var app = express();
 var serverOptions = {};
 
-if (isProd) {
+if (utils.isProd) {
 
 	// in prod, enforce secured connections
 	app.use((req, res, next) => {
@@ -31,7 +34,11 @@ if (isProd) {
 		return next();
 	});
 }
-else {
+else { // dev
+
+	// accept self-signed cdertificates only in development
+	process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
   serverOptions.cert = fs.readFileSync('./cert/server.crt');
   serverOptions.key = fs.readFileSync('./cert/server.key');
 }
@@ -53,9 +60,27 @@ app.get('/', (req, res) => {
 	return res.end(`iBera Outlook Add-In Service in on...`);
 });
 
+// hijack request for manifest file- 
+// render the URLs to point to the deployed domain
+app.get('/manifest.xml', async (req, res) => {
+	try {
+		var content = (await utils.callAsyncFunc(fs, 'readFile', 'static/manifest.xml', 'utf-8')).result;
+
+		// "https://localhost:8443" should always be used for development
+		// replace all occurences of the dev value with the actual value from the configuration/environment variable
+		content = content.replace(new RegExp('https://localhost:8443', 'g'), config.OUTLOOK_SERVICE_ENDPOINT);
+		
+		return res.header('content-type', 'application/xml').end(content);
+	}
+	catch(err) {
+		console.error(`error rendering manifest.xml file: ${err.message}`);
+		return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ error: err.message });
+	}
+});
+
 app.use('/', express.static(path.join(__dirname, 'static')));
 
-if (isProd) {
+if (utils.isProd) {
 	// in prod we will use Azure's certificate to use ssl.
 	// so no need to use https here with a custom certificate for now.
 	// enforcing https in prod is being done on the first middleware (see above)
