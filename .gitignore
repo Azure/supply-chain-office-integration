@@ -55,5 +55,4 @@ bower_components
 # Misc
 dist
 .vscode
-server.crt
-server.key
+
