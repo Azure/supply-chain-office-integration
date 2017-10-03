@@ -7,9 +7,9 @@ var validate = require('jsonschema').validate;
 var request = require('request-promise');
 var config = require('../config');
 
-var ews = require('ews-javascript-api');
-var azureStorage = require('azure-storage');
-var sha256 = require('sha256');
+const ews = require('ews-javascript-api');
+const azureStorage = require('azure-storage');
+const sha256 = require('sha256');
 const intoStream = require('into-stream');
 const btoa = require('btoa');
 const atob = require('atob');
@@ -20,8 +20,8 @@ var app = express();
 
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
 //const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
-const azureStorageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=iberat2keys;AccountKey=VQeSopXnbY4qEW4l1oSzkYdRvyyTY5jxHE2yLPQ1BGldexp9lsUjmfqt39c0Wuq+lnNw7XYDJG4MkCtCfSeoVQ==;EndpointSuffix=core.windows.net';
-//const azureStorageConnectionString = config.AZURE_OI_STORAGE_CONNECTION_STRING; //TODO: Add this connection string to ARM tempalate + modify the OI APP settings via the automation script
+// const azureStorageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=iberat2keys;AccountKey=VQeSopXnbY4qEW4l1oSzkYdRvyyTY5jxHE2yLPQ1BGldexp9lsUjmfqt39c0Wuq+lnNw7XYDJG4MkCtCfSeoVQ==;EndpointSuffix=core.windows.net';
+const azureStorageConnectionString = config.AZURE_OI_STORAGE_CONNECTION_STRING; //TODO: Add this connection string to ARM tempalate + modify the OI APP settings via the automation script
 
 async function getUserId(userToken) {
   return 'demo-user-001';

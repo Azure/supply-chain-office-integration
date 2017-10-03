@@ -25,15 +25,22 @@
     "yargs": "^3.24.0"
   },
   "dependencies": {
+    "atob": "^2.0.3",
+    "azure-storage": "^2.5.0",
+    "base64-js": "^1.2.1",
     "body-parser": "^1.17.2",
+    "btoa": "^1.1.2",
+    "ews-javascript-api": "^0.9.1",
     "express": "^4.14.0",
     "express-cors": "0.0.3",
     "express-validator": "^3.2.1",
     "http-status-codes": "^1.1.6",
+    "into-stream": "^3.1.0",
     "jsonschema": "^1.1.1",
     "nconf": "^0.8.4",
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
+    "sha256": "^0.2.0",
     "web3": "^0.19.0",
     "xmlhttprequest": "^1.8.0"
   }
