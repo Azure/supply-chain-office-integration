@@ -62,6 +62,7 @@ function httpRequest(opts, cb) {
   });
 }
 
+
 function putProof(proof, cb) {
   console.log('adding proof:', proof);
 
@@ -130,7 +131,7 @@ function storeAttachments(event) {
   return processAttachments(true, function(err, response) {
     if (err) return showMessage("Error: " + err.message, event);           
     console.log('got response', response);
-  
+
     var trackingIds = [];
     if (response.attachmentProcessingDetails) {
       for (i = 0; i < response.attachmentProcessingDetails.length; i++ ) {
@@ -138,15 +139,14 @@ function storeAttachments(event) {
         var ad = response.attachmentProcessingDetails[i];
         var proof = {
           proofToEncrypt : {
-            url : ad.url,
-            sasToken : ad.sasToken,
+            sasUrl : ad.sasUrl,
             documentName : ad.name
           },
           publicProof : {
             documentHash : ad.hash
           }
         }; 
-  
+        
         return putProof(proof, function(err, response) {
           if (err) return showMessage(err.message, event);
           
@@ -216,7 +216,8 @@ function processAttachments(isUpload, cb) {
 
 
       return httpRequest({
-        url: config.documentServiceUrl + "/api/Attachment",
+        // url: config.documentServiceUrl + "/api/Attachment",
+        url: "/api/attachment",
         method: 'POST',
         contentType: "application/json; charset=utf-8",          
         data: JSON.stringify(data),          
