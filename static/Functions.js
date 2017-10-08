@@ -267,55 +267,63 @@ function validateProof(event) {
         return showMessage("No proofs to validate found in email", event);           
       }
 
-      var proofs = body.split(beginProofString);
+      var proofsStep1Array = body.split(beginProofString);
+      var proofsStep2Array = proofsStep1Array[1].split(endProofString);
+
+      try {
+        var proofs = JSON.parse(proofsStep2Array[0]);
+      }
+      catch (err) {
+        console.error('invalid json', proofsStep2Array[0]);
+        return showMessage("Invalid json", event); 
+      }
+
+      //var proofs = proofsObj.proofs;
+
+      if (!proofs.length) {
+        return showMessage("no proofs found", event);  
+      }
 
       for (var i in proofs) {
-        if (proofs[i].search(endProofString) != -1) {
-          var proof = proofs[i].split(endProofString);
-
-          if (!proof.length) {
-            return showMessage("Unable to validate proof(s)", event); 
+        
+        var trackingId = proofs[i].trackingId;
+        return getProof(trackingId, function(err, result) {
+          console.log('get proof from chain:', err, result);
+          if (err) {
+            return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId + " error: " + err.message, event); 
+          }
+          
+          if (!result) {
+            return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId, event); 
           }
 
-          var jsonProof = JSON.parse(proof[0]);
-          return getProof(jsonProof[0].trackingId, function(err, result) {
-            console.log('get proof from chain:', err, result);
+          var proofFromChain = result.result.proofs[0];
+          var proofToEncryptStr = JSON.stringify(proofs[0].encryptedProof);
+          var hash = sha256(proofToEncryptStr);
+
+          if (proofFromChain.publicProof.encryptedProofHash !== hash.toUpperCase()) {
+            return showMessage("NOT valid proof for trackingId: " + trackingId, event);                                   
+          }
+
+          if (!proofFromChain.publicProof.publicProof || !proofFromChain.publicProof.publicProof.documentHash) {
+            return showMessage("Valid proof with NO attachment for trackingId: " + trackingId, event);                                             
+          }
+
+          return getFirstAttachmentHash(function(err, result) {
+            console.log('retrieving first attachment hash:', err, result);
             if (err) {
-              return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
+              return showMessage("error retrieving first attachment hash - trackingId: " + trackingId + " error: " + err.message, event); 
             }
+
+            var hash = result.hash;
+            if (proofFromChain.publicProof.publicProof.documentHash === hash) {
+              return showMessage("Valid proof with attachment for trackingId: " + trackingId, event);
+            } 
+
+            return showMessage("Valid proof BUT attachment NOT valid for trackingId: " + trackingId, event);
             
-            if (!result) {
-              return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId, event); 
-            }
-
-            var proofFromChain = result.result[0];
-            var proofToEncryptStr = JSON.stringify(jsonProof[0].encryptedProof);
-            var hash = sha256(proofToEncryptStr);
-
-            if (proofFromChain.publicProof.encryptedProofHash !== hash.toUpperCase()) {
-              return showMessage("NOT valid proof for trackingId: " + jsonProof[0].trackingId, event);                                   
-            }
-
-            if (!proofFromChain.publicProof.publicProof || !proofFromChain.publicProof.publicProof.documentHash) {
-              return showMessage("Valid proof with NO attachment for trackingId: " + jsonProof[0].trackingId, event);                                             
-            }
-
-            return getFirstAttachmentHash(function(err, result) {
-              console.log('retrieving first attachment hash:', err, result);
-              if (err) {
-                return showMessage("error retrieving first attachment hash - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
-              }
-
-              var hash = result.hash;
-              if (proofFromChain.publicProof.publicProof.documentHash === hash) {
-                return showMessage("Valid proof with attachment for trackingId: " + jsonProof[0].trackingId, event);
-              } 
-
-              return showMessage("Valid proof BUT attachment NOT valid for trackingId: " + jsonProof[0].trackingId, event);
-              
-            });
           });
-        }
+        });
       }
     }
     catch(ex) {
@@ -344,16 +352,16 @@ function provideProof(event) {
         return showMessage(err.message, event);
       }
       
-      var proofs = response.result;
+      var proofs = response.result.proofs;
       console.log('got proofs:', proofs);
 
       var attachments = [];
       for (var i in proofs) {
         var proof = proofs[i];
-        if (proof && proof.encryptedProof && proof.encryptedProof.sasToken && proof.encryptedProof.documentName) {
+        if (proof && proof.encryptedProof && proof.encryptedProof.sasUrl && proof.encryptedProof.documentName) {
           attachments.push({
             type : Office.MailboxEnums.AttachmentType.File,
-            url : proof.encryptedProof.sasToken, 
+            url : proof.encryptedProof.sasUrl, 
             name : proof.encryptedProof.documentName
           })
         }

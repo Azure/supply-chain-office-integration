@@ -11,17 +11,16 @@ const ews = require('ews-javascript-api');
 const azureStorage = require('azure-storage');
 const sha256 = require('sha256');
 const intoStream = require('into-stream');
-const btoa = require('btoa');
-const atob = require('atob');
 
 var utils = require('../utils');
 
 var app = express();
 
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
-//const documentServicesEndpoint = config.DOCUMENT_SERVICES_ENDPOINT;
-// const azureStorageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=iberat2keys;AccountKey=VQeSopXnbY4qEW4l1oSzkYdRvyyTY5jxHE2yLPQ1BGldexp9lsUjmfqt39c0Wuq+lnNw7XYDJG4MkCtCfSeoVQ==;EndpointSuffix=core.windows.net';
 const azureStorageConnectionString = config.AZURE_OI_STORAGE_CONNECTION_STRING; //TODO: Add this connection string to ARM tempalate + modify the OI APP settings via the automation script
+const azureStorageAccountName = config.AZURE_OI_STORAGE_ACCOUNT_NAME || 'iberat2keys'; // TODO: Remove 'OR'
+
+const CONTAINER_NAME = 'attachments';
 
 async function getUserId(userToken) {
   return 'demo-user-001';
@@ -76,11 +75,11 @@ app.post('/attachment', async (req, res) => {
     
     var attachmentIds = req.body.attachments.map(a => a.id);
     
-    // TODO: Add comment about large files 
+    // NOTE: exch.GetAttachments() returns response with all the attachments contents in BASE64 strings. Therefore, attachments in big sizes might cause long response times over network, or high memory usage in the client side.
     var response = await exch.GetAttachments(attachmentIds,ews.BodyType.Text,null);
     var azureBlobService = azureStorage.createBlobService(azureStorageConnectionString);
 
-    await utils.callAsyncFunc(azureBlobService,'createContainerIfNotExists','attachments');
+    await utils.callAsyncFunc(azureBlobService,'createContainerIfNotExists',CONTAINER_NAME);
 
     // Handle responses (for every attachemnt there is a response into reponses:
     for(var i=0; i<response.responses.length; i++){
@@ -89,17 +88,16 @@ app.post('/attachment', async (req, res) => {
       var base64Content = response.responses[i].attachment.base64Content;
       
 
-      var binaryData  =   new Buffer(base64Content, 'base64');
+      var binaryData  =   Buffer.from(base64Content, 'base64');
       var contentHash = sha256(binaryData);
       var blobName = userName + "/" + encodeURIComponent(contentHash) + "/" + fileName;
       
       var binaryStream = intoStream(binaryData);
 
       if(req.body.upload){
-        // TODO: identify the file type (from Ami)
-        await utils.callAsyncFunc(azureBlobService,'createBlockBlobFromStream','attachemnts',blobName,binaryStream,binaryData.byteLength);
-        var sasToken = azureBlobService.generateSharedAccessSignature("attachemnts",blobName,{AccessPolicy:{Expiry:azureStorage.date.daysFromNow(7)}});
-        var sasUrl = azureBlobService.getUrl("attachemnts",blobName,sasToken, true);
+        await utils.callAsyncFunc(azureBlobService,'createBlockBlobFromStream',CONTAINER_NAME,blobName,binaryStream,binaryData.length);
+        var sasToken = getSAS("attachments",azureBlobService, {name: blobName});
+        var sasUrl = azureBlobService.getUrl("attachments",blobName,sasToken, true);
       }
 
       attachmentProcessingDetails.push(
@@ -112,7 +110,7 @@ app.post('/attachment', async (req, res) => {
     }
 
     res.json({
-      attachemntsProcessed: attachmentProcessingDetails.length,
+      attachmentsProcessed: attachmentProcessingDetails.length,
       attachmentProcessingDetails: attachmentProcessingDetails
     });
   }
@@ -122,6 +120,21 @@ app.post('/attachment', async (req, res) => {
   }
     
 });
+
+function getSAS(CONTAINER_NAME, blobSvc, opts) {
+    var sharedAccessPolicy = 
+    {
+      AccessPolicy:
+      {
+        Start: azureStorage.date.daysFromNow(-1),
+        Expiry:azureStorage.date.daysFromNow(7),
+        Permissions:azureStorage.BlobUtilities.SharedAccessPermissions.READ
+      }
+    };
+    var sasToken = blobSvc.generateSharedAccessSignature(CONTAINER_NAME, opts.name, sharedAccessPolicy);
+    console.log('sasToken', sasToken);
+    return sasToken;
+  }
 
 ///////////////////////////////////////
 

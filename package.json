@@ -41,6 +41,7 @@
     "request": "^2.81.0",
     "request-promise": "^4.2.1",
     "sha256": "^0.2.0",
+    "stream-buffers": "^3.0.1",
     "web3": "^0.19.0",
     "xmlhttprequest": "^1.8.0"
   }
