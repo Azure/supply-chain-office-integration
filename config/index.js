@@ -23,7 +23,6 @@ var config = {};
 // validate configuration
 var params = [
   'IBERA_SERVICES_ENDPOINT',
-  //'DOCUMENT_SERVICES_ENDPOINT',
   'OUTLOOK_SERVICE_ENDPOINT',
   'AZURE_OI_STORAGE_CONNECTION_STRING'
 ];
