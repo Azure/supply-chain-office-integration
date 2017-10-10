@@ -3,8 +3,8 @@
 
 
 // The initialize function is required for all add-ins.
-Office.initialize = function () {
-  jQuery(document).ready(function () {
+Office.initialize = function() {
+  jQuery(document).ready(function() {
     console.log('JQuery initialized');
   });
 };
@@ -12,7 +12,8 @@ Office.initialize = function () {
 console.log('loading supply-chain add-in');
 
 // TODO move to configuration retrieved from the server
-const containerName = "attachments";
+const USER_TOKEN_HEADER_KEY = 'user-token';
+const CONTAINER_NAME = "attachments";
 
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
@@ -21,22 +22,22 @@ const endProofString = "-----END PROOF-----";
 function httpRequest(opts, cb) {
 
   // get user token, add to headers and invoke the http request 
-  return getUserIdentityToken(function (err, token) {
+  return getUserIdentityToken(function(err, token) {
     if (err) return cb(err);
 
     opts.headers = opts.headers || {};
-    if (!opts.headers['User-Token']) {
-      opts.headers['User-Token'] = token;
+    if (!opts.headers[USER_TOKEN_HEADER_KEY]) {
+      opts.headers[USER_TOKEN_HEADER_KEY] = token;
     }
 
     console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
 
-    opts.success = function (data, textStatus) {
+    opts.success = function(data, textStatus) {
       console.log('got data:', data, textStatus);
       return cb(null, data);
     }
 
-    opts.error = function (xhr, textStatus, errorThrown) {
+    opts.error = function(xhr, textStatus, errorThrown) {
       console.log('got error:', textStatus, errorThrown);
       var msg = 'error invoking http request';
 
@@ -109,7 +110,7 @@ function getHash(url, cb) {
 }
 
 function getUserIdentityToken(cb) {
-  return Office.context.mailbox.getUserIdentityTokenAsync(function (userToken) {
+  return Office.context.mailbox.getUserIdentityTokenAsync(function(userToken) {
     if (userToken.error) return cb(userToken.error);
     return cb(null, userToken.value);
   });
@@ -126,7 +127,7 @@ function getClientConfiguration(cb) {
 
 function storeAttachments(event) {
   console.log('storeAttachments called');
-  return processAttachments(true, function (err, response) {
+  return processAttachments(true, function(err, response) {
     if (err) return showMessage("Error: " + err.message, event);
     console.log('got response', response);
 
@@ -145,7 +146,7 @@ function storeAttachments(event) {
           }
         };
 
-        return putProof(proof, function (err, response) {
+        return putProof(proof, function(err, response) {
           if (err) return showMessage(err.message, event);
 
           trackingIds.push(response.trackingId);
@@ -170,17 +171,17 @@ function processAttachments(isUpload, cb) {
     return cb(new Error("No attachments: There are no attachments on this item."));
   }
 
-  return Office.context.mailbox.getCallbackTokenAsync(function (attachmentTokenResult) {
+  return Office.context.mailbox.getCallbackTokenAsync(function(attachmentTokenResult) {
     console.log('getCallbackTokenAsync callback result:', attachmentTokenResult);
     if (attachmentTokenResult.error) return cb(attachmentTokenResult.error);
 
-    return getClientConfiguration(function (err, config) {
+    return getClientConfiguration(function(err, config) {
       if (err) return cb(err);
 
       var data = {};
       data.ewsUrl = Office.context.mailbox.ewsUrl;
       data.attachments = [];
-      data.containerName = containerName;
+      data.containerName = CONTAINER_NAME;
       data.upload = isUpload;
       data.attachmentToken = attachmentTokenResult.value;
 
@@ -196,23 +197,6 @@ function processAttachments(isUpload, cb) {
         }
       }
 
-      // **************************************************************************************************
-      // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
-      /*
-      return cb(null, {
-        attachmentProcessingDetails: [
-          {
-            url: 'http://...',
-            sasToken: 'some token',
-            name: 'some name',
-            hash: 'the hash!'
-          }
-        ]
-      });
-      */
-      // **************************************************************************************************
-
-
       return httpRequest({
         // url: config.documentServiceUrl + "/api/Attachment",
         url: "/api/attachment",
@@ -220,13 +204,8 @@ function processAttachments(isUpload, cb) {
         contentType: "application/json; charset=utf-8",
         data: JSON.stringify(data),
         dataType: 'json',
-      }, function (err, response) {
+      }, function(err, response) {
         if (err) return cb(err);
-
-        // in this case the document service might return a result that contains an error, so also need to check this specifically
-        // TODO: revisit api on document service after rewriting in Node.js.
-        // if there's an error it should send back a statusCode != 200 to indicate that
-        if (response.isError) return cb(new Error('error uploading document: ' + response.message));
 
         return cb(null, response);
       });
@@ -236,7 +215,7 @@ function processAttachments(isUpload, cb) {
 
 function getFirstAttachmentHash(cb) {
 
-  return processAttachments(true, function (err, response) {
+  return processAttachments(true, function(err, response) {
     if (err) return cb(err);
     console.log('got response', response);
 
@@ -246,17 +225,14 @@ function getFirstAttachmentHash(cb) {
     }
 
     var hash = response.attachmentProcessingDetails[0].hash;
-    return cb(null, {
-      hash: hash
-    });
-
+    return cb(null, {hash: hash});
   });
 }
 
 
 // TODO: revisit&rewrite this function
 function validateProof(event) {
-  return Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
+  return Office.context.mailbox.item.body.getAsync('text', {}, function(result) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       return showMessage(result.error, event);
     }
@@ -277,8 +253,6 @@ function validateProof(event) {
         return showMessage("Invalid json", event);
       }
 
-      //var proofs = proofsObj.proofs;
-
       if (!proofs.length) {
         return showMessage("no proofs found", event);
       }
@@ -286,17 +260,17 @@ function validateProof(event) {
       for (var i in proofs) {
 
         var trackingId = proofs[i].trackingId;
-        return getProof(trackingId, function (err, result) {
-          console.log('get proof from chain:', err, result);
+        return getProof(trackingId, function(err, getProofResult) {
+          console.log('get proof from chain:', err, getProofResult);
           if (err) {
             return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId + " error: " + err.message, event);
           }
 
-          if (!result) {
+          if (!getProofResult) {
             return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId, event);
           }
 
-          var proofFromChain = result.result.proofs[0];
+          var proofFromChain = getProofResult.result.proofs[0];
           var proofToEncryptStr = JSON.stringify(proofs[0].encryptedProof);
           var hash = sha256(proofToEncryptStr);
 
@@ -308,7 +282,7 @@ function validateProof(event) {
             return showMessage("Valid proof with NO attachment for trackingId: " + trackingId, event);
           }
 
-          return getFirstAttachmentHash(function (err, result) {
+          return getFirstAttachmentHash(function(err, result) {
             console.log('retrieving first attachment hash:', err, result);
             if (err) {
               return showMessage("error retrieving first attachment hash - trackingId: " + trackingId + " error: " + err.message, event);
@@ -331,7 +305,7 @@ function validateProof(event) {
 }
 
 function provideProof(event) {
-  return Office.context.mailbox.item.body.getAsync('text', {}, function (result) {
+  return Office.context.mailbox.item.body.getAsync('text', {}, function(result) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       return showMessage(result.error, event);
     }
@@ -344,13 +318,13 @@ function provideProof(event) {
     var trackingId = guids[0];
     console.log('providing proof for trackingId:', trackingId);
 
-    return getProof(trackingId, function (err, response) {
+    return getProof(trackingId, function(err, getProofResponse) {
       if (err) {
         console.error('error getting proof:', err.message);
         return showMessage(err.message, event);
       }
 
-      var proofs = response.result.proofs;
+      var proofs = getProofResponse.result.proofs;
       console.log('got proofs:', proofs);
 
       var attachments = [];
@@ -402,7 +376,7 @@ function showMessage(message, event) {
     icon: 'icon-16',
     message: message,
     persistent: false
-  }, function (result) {
+  }, function(result) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       showMessage('Error showing a notification', event);
     }

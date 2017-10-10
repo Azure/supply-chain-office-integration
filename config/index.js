@@ -24,7 +24,7 @@ var config = {};
 var params = [
   'IBERA_SERVICES_ENDPOINT',
   'OUTLOOK_SERVICE_ENDPOINT',
-  'AZURE_OI_STORAGE_CONNECTION_STRING'
+  'STORAGE_CONNECTION_STRING'
 ];
 
 // read configuration values from nconfig

@@ -4,6 +4,7 @@ var util = require('util');
 var express = require('express');
 var HttpStatus = require('http-status-codes');
 var validate = require('jsonschema').validate;
+var schema = require('./schema');
 var request = require('request-promise');
 var config = require('../config');
 
@@ -17,86 +18,71 @@ var utils = require('../utils');
 var app = express();
 
 const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
-const azureStorageConnectionString = config.AZURE_OI_STORAGE_CONNECTION_STRING;
+const azureStorageConnectionString = config.STORAGE_CONNECTION_STRING;
 
+const USER_TOKEN_HEADER_KEY = 'user-token';
 const CONTAINER_NAME = 'attachments';
 
+var azureBlobService = azureStorage.createBlobService(azureStorageConnectionString);
+
+//Will be implemented next,  https://amitu-ted.visualstudio.com/DefaultCollection/iBera/_workitems/edit/11
 async function getUserId(userToken) {
   return 'demo-user-001';
-  /* try {
-     var uri = documentServicesEndpoint + `/api/user`;
-     var result = await request({
-       method: 'GET',
-       uri,
-       headers: { 'User-Token': userToken },
-       json: true
-     });
-     console.log(`got response: ${util.inspect(result)}`);
-     return result;
-   }
-   catch (err) {
-     var errorMessage = `Could not retrieve userId from user token: ${userToken}`;
-     console.log(errorMessage);
-     throw new Error(errorMessage);
-   }
-   */
 }
 
 
-app.get('/config', async(req, res) => {
-
+app.get('/config', async (req, res) => {
   try {
-    var result = {
-      documentServiceUrl: config.DOCUMENT_SERVICES_ENDPOINT
-    }
+    var result = {documentServiceUrl: config.DOCUMENT_SERVICES_ENDPOINT}
 
     console.log(`sending configuration: ${util.inspect(result)}`);
     res.json(result);
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: err.message
-    });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
 });
 
 app.post('/attachment', async(req, res) => {
-  if (!req.headers['user-token']) {
-    return res.status(HttpStatus.BAD_REQUEST).json({
-      error: `user-token request header is missing`
-    });
+  var userToken = req.headers[USER_TOKEN_HEADER_KEY];
+  if (!userToken) {
+    return res.status(HttpStatus.BAD_REQUEST).json({error: CONTAINER_NAME + ` request header is missing`});
   }
 
-  var userName = getUserId(req.headers['user-token']);
+  if(!validate(req.body, schema.attachment.put).valid){
+    return res.status(HttpStatus.BAD_REQUEST).json({ error: `invalid schema - expected schema is ${util.inspect(schema.attachment.put)}` });
+  }
+
+  var userId = await getUserId(userToken);
   try {
     var attachmentProcessingDetails = [];
     var exch = new ews.ExchangeService(ews.ExchangeVersion.Exchange2013);
     exch.Url = new ews.Uri(req.body.ewsUrl);
     exch.Credentials = new ews.OAuthCredentials(req.body.attachmentToken);
 
-    var attachmentIds = req.body.attachments.map(a => a.id);
+    var attachmentIds = req.body.attachments.map(attachment => attachment.id);
 
-    // NOTE: exch.GetAttachments() returns response with all the attachments contents in BASE64 strings. Therefore, attachments in big sizes might cause long response times over network, or high memory usage in the client side.
-    var response = await exch.GetAttachments(attachmentIds, ews.BodyType.Text, null);
-    var azureBlobService = azureStorage.createBlobService(azureStorageConnectionString);
+    // NOTE: Since the exch.GetAttachments() API returns the full attachment in a base64 format, 
+    // and not as a stream, we assume that the attachments are small enough to fit into a memory 
+    // stream before sending them to the blob storage.
+    var getAttachmentRequest = await exch.GetAttachments(attachmentIds, ews.BodyType.Text, null);
+    var attachments = getAttachmentRequest.responses;
 
     await utils.callAsyncFunc(azureBlobService, 'createContainerIfNotExists', CONTAINER_NAME);
 
-    // Handle responses (for every attachemnt there is a response into reponses:
-    for (var i = 0; i < response.responses.length; i++) {
-      var fileName = response.responses[i].attachment.name;
-      var base64Content = response.responses[i].attachment.base64Content;
+    // Handle responses (for every attachemnt there is a response in reponses):
+    for (var i = 0; i < attachments.length; i++) {
+      var fileName = attachments[i].attachment.name;
+      var base64Content = attachments[i].attachment.base64Content;
       var binaryData = Buffer.from(base64Content, 'base64');
       var contentHash = sha256(binaryData);
-      var blobName = userName + "/" + encodeURIComponent(contentHash) + "/" + fileName;
+      var blobName = encodeURIComponent(userId) + "/" + encodeURIComponent(contentHash) + "/" + encodeURIComponent(fileName);
 
       var binaryStream = intoStream(binaryData);
 
       if (req.body.upload) {
         await utils.callAsyncFunc(azureBlobService, 'createBlockBlobFromStream', CONTAINER_NAME, blobName, binaryStream, binaryData.length);
-        var sasToken = getSAS("attachments", azureBlobService, {
-          name: blobName
-        });
-        var sasUrl = azureBlobService.getUrl("attachments", blobName, sasToken, true);
+        var sasToken = getSAS(CONTAINER_NAME, azureBlobService, {name: blobName});
+        var sasUrl = azureBlobService.getUrl(CONTAINER_NAME, blobName, sasToken, true);
       }
 
       attachmentProcessingDetails.push({
@@ -106,14 +92,10 @@ app.post('/attachment', async(req, res) => {
       });
     }
 
-    res.json({
-      attachmentsProcessed: attachmentProcessingDetails.length,
-      attachmentProcessingDetails: attachmentProcessingDetails
-    });
+    return res.json({attachmentProcessingDetails: attachmentProcessingDetails});
+    
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: err.message
-    });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
 
 });
@@ -121,8 +103,8 @@ app.post('/attachment', async(req, res) => {
 function getSAS(CONTAINER_NAME, blobSvc, opts) {
   var sharedAccessPolicy = {
     AccessPolicy: {
-      Start: azureStorage.date.daysFromNow(-1),
-      Expiry: azureStorage.date.daysFromNow(7),
+      Start: azureStorage.date.minutesFromNow(-1),
+      Expiry: azureStorage.date.minutesFromNow(2),
       Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ
     }
   };
@@ -133,13 +115,11 @@ function getSAS(CONTAINER_NAME, blobSvc, opts) {
 
 app.put('/proof', async(req, res) => {
   try {
-    if (!req.headers['user-token']) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
-        error: `user-token request header is missing`
-      });
+    if (!req.headers[USER_TOKEN_HEADER_KEY]) {
+      return res.status(HttpStatus.BAD_REQUEST).json({error: CONTAINER_NAME + ` request header is missing`});
     }
 
-    req.body.userId = await getUserId(req.headers['user-token']);
+    req.body.userId = await getUserId(req.headers[USER_TOKEN_HEADER_KEY]);
 
     var uri = iberaServicesEndpoint + `/api/proof`;
     var result = await request({
@@ -152,9 +132,7 @@ app.put('/proof', async(req, res) => {
     console.log(`got response: ${util.inspect(result)}`);
     res.json(result);
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: err.message
-    });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
 });
 
@@ -163,18 +141,13 @@ app.get('/proof/:trackingId', async(req, res) => {
     req.checkParams('trackingId', 'Invalid trackingId').notEmpty();
     var errors = await req.getValidationResult();
     if (!errors.isEmpty()) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
-        error: `there have been validation errors: ${util.inspect(errors.array())}`
-      });
+      return res.status(HttpStatus.BAD_REQUEST).json({error: `there have been validation errors: ${util.inspect(errors.array())}`});
     }
-    if (!req.headers['user-token']) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
-        error: `user-token request header is missing`
-      });
+    if (!req.headers[USER_TOKEN_HEADER_KEY]) {
+      return res.status(HttpStatus.BAD_REQUEST).json({error: CONTAINER_NAME + ` request header is missing`});
     }
 
-    var userId = await getUserId(req.headers['user-token']);
-
+    var userId = await getUserId(req.headers[USER_TOKEN_HEADER_KEY]);
 
     // trackingId is encoded. leave it encoded since we also use it as part of the URL in the request
     var trackingId = req.params.trackingId;
@@ -187,9 +160,7 @@ app.get('/proof/:trackingId', async(req, res) => {
     var path = iberaServicesEndpoint + `/api/proof/${trackingId}?userId=${userId}&decrypt=${decrypt}`;
 
     try {
-      var result = await request.get(path, {
-        json: true
-      });
+      var result = await request.get(path, {json: true});
     } catch (err) {
       if (err.statusCode === HttpStatus.NOT_FOUND) {
         // pass on the error we got from the services api
@@ -200,32 +171,24 @@ app.get('/proof/:trackingId', async(req, res) => {
     }
 
     console.log(`got response: ${util.inspect(result)}`);
-    res.json({
-      result
-    });
+    res.json({result});
   } catch (err) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: err.message
-    });
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
 
 });
 
 
-app.get('/key/:keyId', async(req, res) => {
+app.get('/key/:keyId', async (req, res) => {
   try {
     req.checkParams('keyId', 'Invalid keyId').notEmpty();
     var errors = await req.getValidationResult();
     if (!errors.isEmpty()) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
-        error: `there have been validation errors: ${util.inspect(errors.array())}`
-      });
+      return res.status(HttpStatus.BAD_REQUEST).json({error: `there have been validation errors: ${util.inspect(errors.array())}`});
     }
 
-    if (!req.headers['user-token']) {
-      return res.status(HttpStatus.BAD_REQUEST).json({
-        error: `user-token request header is missing`
-      });
+    if (!req.headers[USER_TOKEN_HEADER_KEY]) {
+      return res.status(HttpStatus.BAD_REQUEST).json({error: CONTAINER_NAME + ` request header is missing`});
     }
 
     // keyId is encoded. leave it encoded since we also use it as part of the URL in the request
@@ -234,19 +197,15 @@ app.get('/key/:keyId', async(req, res) => {
       keyId = encodeURIComponent(keyId);
     }
 
-    var userId = await getUserId(req.headers['user-token']);
+    var userId = await getUserId(req.headers[USER_TOKEN_HEADER_KEY]);
 
     var path = iberaServicesEndpoint + `/api/key/${keyId}?userId=${userId}`;
-    var result = await request.get(path, {
-      json: true
-    });
+    var result = await request.get(path, {json: true});
 
     console.log(`got response: ${util.inspect(result)}`);
     res.json(result);
-  } catch (ex) {
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-      error: err.message
-    });
+  } catch (err) {
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
 });
 
@@ -258,10 +217,11 @@ app.get('/hash', (req, res) => {
   console.log(`getting url: '${url}'`);
   return http.get(url.parse(req.query.url), res => {
     var data = [];
-    return res.on('data', function (chunk) {
+    return res
+      .on('data', function(chunk) {
         data.push(chunk);
       })
-      .on('end', function () {
+      .on('end', function() {
         //at this point data is an array of Buffers
         //so Buffer.concat() can make us a new Buffer
         //of all of them together
@@ -272,9 +232,7 @@ app.get('/hash', (req, res) => {
         });
       })
       .on('error', err => {
-        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-          error: err.message
-        });
+        return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
       });
 
   });
