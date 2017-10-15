@@ -1,7 +1,7 @@
 {
     "attachment": {
 
-      "put": {
+      "post": {
         "id": "/AttachmentPut",
         "type": "object",
         "properties": {

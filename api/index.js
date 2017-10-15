@@ -36,7 +36,7 @@ app.get('/config', async (req, res) => {
     var result = {documentServiceUrl: config.DOCUMENT_SERVICES_ENDPOINT}
 
     console.log(`sending configuration: ${util.inspect(result)}`);
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
@@ -48,7 +48,7 @@ app.post('/attachment', async(req, res) => {
     return res.status(HttpStatus.BAD_REQUEST).json({error: CONTAINER_NAME + ` request header is missing`});
   }
 
-  if(!validate(req.body, schema.attachment.put).valid){
+  if(!validate(req.body, schema.attachment.post).valid){
     return res.status(HttpStatus.BAD_REQUEST).json({ error: `invalid schema - expected schema is ${util.inspect(schema.attachment.put)}` });
   }
 
@@ -130,7 +130,7 @@ app.put('/proof', async(req, res) => {
     });
 
     console.log(`got response: ${util.inspect(result)}`);
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
@@ -203,7 +203,7 @@ app.get('/key/:keyId', async (req, res) => {
     var result = await request.get(path, {json: true});
 
     console.log(`got response: ${util.inspect(result)}`);
-    res.json(result);
+    return res.json(result);
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }

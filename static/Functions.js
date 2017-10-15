@@ -13,8 +13,6 @@ console.log('loading supply-chain add-in');
 
 // TODO move to configuration retrieved from the server
 const USER_TOKEN_HEADER_KEY = 'user-token';
-const CONTAINER_NAME = "attachments";
-
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
@@ -181,7 +179,6 @@ function processAttachments(isUpload, cb) {
       var data = {};
       data.ewsUrl = Office.context.mailbox.ewsUrl;
       data.attachments = [];
-      data.containerName = CONTAINER_NAME;
       data.upload = isUpload;
       data.attachmentToken = attachmentTokenResult.value;
 
