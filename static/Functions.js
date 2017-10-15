@@ -2,9 +2,8 @@
 // See full license at the bottom of this file.
 
 
-
 // The initialize function is required for all add-ins.
-Office.initialize = function () {
+Office.initialize = function() {
   jQuery(document).ready(function() {
     console.log('JQuery initialized');
   });
@@ -13,8 +12,7 @@ Office.initialize = function () {
 console.log('loading supply-chain add-in');
 
 // TODO move to configuration retrieved from the server
-const containerName = "attachments";
-
+const USER_TOKEN_HEADER_KEY = 'user-token';
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
@@ -26,34 +24,33 @@ function httpRequest(opts, cb) {
     if (err) return cb(err);
 
     opts.headers = opts.headers || {};
-    if (!opts.headers['User-Token']) {
-      opts.headers['User-Token'] = token; 
+    if (!opts.headers[USER_TOKEN_HEADER_KEY]) {
+      opts.headers[USER_TOKEN_HEADER_KEY] = token;
     }
 
     console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
 
-    opts.success = function (data, textStatus) {
+    opts.success = function(data, textStatus) {
       console.log('got data:', data, textStatus);
       return cb(null, data);
     }
-    
-    opts.error = function (xhr, textStatus, errorThrown) {
+
+    opts.error = function(xhr, textStatus, errorThrown) {
       console.log('got error:', textStatus, errorThrown);
       var msg = 'error invoking http request';
-      
+
       // override message if we got an error message from the server
       var response;
       try {
         response = JSON.parse(xhr.responseText);
-      }
-      catch(err) {
+      } catch (err) {
         console.warn('error parsing object: ', xhr.responseText);
       }
 
       if (response && response.error) {
         msg = response.error;
       }
-      
+
       return cb(new Error(msg));
     }
 
@@ -62,40 +59,41 @@ function httpRequest(opts, cb) {
   });
 }
 
+
 function putProof(proof, cb) {
   console.log('adding proof:', proof);
 
-  return httpRequest({ 
-    method: 'PUT', 
-    contentType: "application/json; charset=utf-8",      
+  return httpRequest({
+    method: 'PUT',
+    contentType: "application/json; charset=utf-8",
     url: '/api/proof',
-    data: JSON.stringify(proof), 
+    data: JSON.stringify(proof),
     dataType: 'json'
   }, cb);
 }
 
 function getKey(keyId, cb) {
-  console.log('getting key for keyId', keyId);  
+  console.log('getting key for keyId', keyId);
 
   if (keyId === decodeURIComponent(keyId)) {
     keyId = encodeURIComponent(keyId);
   }
 
-  return httpRequest({ 
-    method: 'GET', 
-    url: '/api/key/' + keyId 
+  return httpRequest({
+    method: 'GET',
+    url: '/api/key/' + keyId
   }, cb);
 }
 
 function getProof(trackingId, cb) {
-  console.log('getting proof for trackingId', trackingId);  
- 
+  console.log('getting proof for trackingId', trackingId);
+
   if (trackingId === decodeURIComponent(trackingId)) {
     trackingId = encodeURIComponent(trackingId);
   }
 
-  return httpRequest({ 
-    method: 'GET', 
+  return httpRequest({
+    method: 'GET',
     url: '/api/proof/' + trackingId
   }, cb);
 }
@@ -103,8 +101,8 @@ function getProof(trackingId, cb) {
 function getHash(url, cb) {
   console.log('getting hash for url', url);
 
-  return httpRequest({ 
-    method: 'GET', 
+  return httpRequest({
+    method: 'GET',
     url: '/api/hash?url=' + encodeURIComponent(url)
   }, cb);
 }
@@ -119,39 +117,38 @@ function getUserIdentityToken(cb) {
 function getClientConfiguration(cb) {
   console.log('getting configuration from server');
 
-  return httpRequest({ 
-    method: 'GET', 
-    url: '/api/config' 
+  return httpRequest({
+    method: 'GET',
+    url: '/api/config'
   }, cb);
 }
 
 function storeAttachments(event) {
   console.log('storeAttachments called');
   return processAttachments(true, function(err, response) {
-    if (err) return showMessage("Error: " + err.message, event);           
+    if (err) return showMessage("Error: " + err.message, event);
     console.log('got response', response);
-  
+
     var trackingIds = [];
     if (response.attachmentProcessingDetails) {
-      for (i = 0; i < response.attachmentProcessingDetails.length; i++ ) {
+      for (i = 0; i < response.attachmentProcessingDetails.length; i++) {
 
         var ad = response.attachmentProcessingDetails[i];
         var proof = {
-          proofToEncrypt : {
-            url : ad.url,
-            sasToken : ad.sasToken,
-            documentName : ad.name
+          proofToEncrypt: {
+            sasUrl: ad.sasUrl,
+            documentName: ad.name
           },
-          publicProof : {
-            documentHash : ad.hash
+          publicProof: {
+            documentHash: ad.hash
           }
-        }; 
-  
+        };
+
         return putProof(proof, function(err, response) {
           if (err) return showMessage(err.message, event);
-          
+
           trackingIds.push(response.trackingId);
-  
+
           Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
           return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
         });
@@ -173,7 +170,7 @@ function processAttachments(isUpload, cb) {
   }
 
   return Office.context.mailbox.getCallbackTokenAsync(function(attachmentTokenResult) {
-    console.log('getCallbackTokenAsync callback result:', attachmentTokenResult);    
+    console.log('getCallbackTokenAsync callback result:', attachmentTokenResult);
     if (attachmentTokenResult.error) return cb(attachmentTokenResult.error);
 
     return getClientConfiguration(function(err, config) {
@@ -182,7 +179,6 @@ function processAttachments(isUpload, cb) {
       var data = {};
       data.ewsUrl = Office.context.mailbox.ewsUrl;
       data.attachments = [];
-      data.containerName = containerName;
       data.upload = isUpload;
       data.attachmentToken = attachmentTokenResult.value;
 
@@ -198,38 +194,17 @@ function processAttachments(isUpload, cb) {
         }
       }
 
-      // **************************************************************************************************
-      // TODO: remove, this is a temporary bypassing the document service until Beat brings it online
-      /*
-      return cb(null, {
-        attachmentProcessingDetails: [
-          {
-            url: 'http://...',
-            sasToken: 'some token',
-            name: 'some name',
-            hash: 'the hash!'
-          }
-        ]
-      });
-      */
-      // **************************************************************************************************
-
-
       return httpRequest({
-        url: config.documentServiceUrl + "/api/Attachment",
+        // url: config.documentServiceUrl + "/api/Attachment",
+        url: "/api/attachment",
         method: 'POST',
-        contentType: "application/json; charset=utf-8",          
-        data: JSON.stringify(data),          
+        contentType: "application/json; charset=utf-8",
+        data: JSON.stringify(data),
         dataType: 'json',
       }, function(err, response) {
-          if (err) return cb(err);
-        
-          // in this case the document service might return a result that contains an error, so also need to check this specifically
-          // TODO: revisit api on document service after rewriting in Node.js.
-          // if there's an error it should send back a statusCode != 200 to indicate that
-          if (response.isError) return cb(new Error('error uploading document: ' + response.message));
+        if (err) return cb(err);
 
-          return cb(null, response);
+        return cb(null, response);
       });
     });
   });
@@ -239,7 +214,7 @@ function getFirstAttachmentHash(cb) {
 
   return processAttachments(true, function(err, response) {
     if (err) return cb(err);
-    console.log('got response', response);    
+    console.log('got response', response);
 
     if (!response.attachmentProcessingDetails || !response.attachmentProcessingDetails.length) {
       console.error('hash is not available');
@@ -247,8 +222,7 @@ function getFirstAttachmentHash(cb) {
     }
 
     var hash = response.attachmentProcessingDetails[0].hash;
-    return cb(null, { hash: hash });
-
+    return cb(null, {hash: hash});
   });
 }
 
@@ -259,66 +233,70 @@ function validateProof(event) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       return showMessage(result.error, event);
     }
-    
+
     try {
       var body = result.value;
       if (body.search(beginProofString) === -1 || body.search(endProofString) === -1) {
-        return showMessage("No proofs to validate found in email", event);           
+        return showMessage("No proofs to validate found in email", event);
       }
 
-      var proofs = body.split(beginProofString);
+      var proofsStep1Array = body.split(beginProofString);
+      var proofsStep2Array = proofsStep1Array[1].split(endProofString);
+
+      try {
+        var proofs = JSON.parse(proofsStep2Array[0]);
+      } catch (err) {
+        console.error('invalid json', proofsStep2Array[0]);
+        return showMessage("Invalid json", event);
+      }
+
+      if (!proofs.length) {
+        return showMessage("no proofs found", event);
+      }
 
       for (var i in proofs) {
-        if (proofs[i].search(endProofString) != -1) {
-          var proof = proofs[i].split(endProofString);
 
-          if (!proof.length) {
-            return showMessage("Unable to validate proof(s)", event); 
+        var trackingId = proofs[i].trackingId;
+        return getProof(trackingId, function(err, getProofResult) {
+          console.log('get proof from chain:', err, getProofResult);
+          if (err) {
+            return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId + " error: " + err.message, event);
           }
 
-          var jsonProof = JSON.parse(proof[0]);
-          return getProof(jsonProof[0].trackingId, function(err, result) {
-            console.log('get proof from chain:', err, result);
+          if (!getProofResult) {
+            return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + trackingId, event);
+          }
+
+          var proofFromChain = getProofResult.result.proofs[0];
+          var proofToEncryptStr = JSON.stringify(proofs[0].encryptedProof);
+          var hash = sha256(proofToEncryptStr);
+
+          if (proofFromChain.publicProof.encryptedProofHash !== hash.toUpperCase()) {
+            return showMessage("NOT valid proof for trackingId: " + trackingId, event);
+          }
+
+          if (!proofFromChain.publicProof.publicProof || !proofFromChain.publicProof.publicProof.documentHash) {
+            return showMessage("Valid proof with NO attachment for trackingId: " + trackingId, event);
+          }
+
+          return getFirstAttachmentHash(function(err, result) {
+            console.log('retrieving first attachment hash:', err, result);
             if (err) {
-              return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
-            }
-            
-            if (!result) {
-              return showMessage("error retrieving the proof from blockchain for validation - trackingId: " + jsonProof[0].trackingId, event); 
+              return showMessage("error retrieving first attachment hash - trackingId: " + trackingId + " error: " + err.message, event);
             }
 
-            var proofFromChain = result.result[0];
-            var proofToEncryptStr = JSON.stringify(jsonProof[0].encryptedProof);
-            var hash = sha256(proofToEncryptStr);
-
-            if (proofFromChain.publicProof.encryptedProofHash !== hash.toUpperCase()) {
-              return showMessage("NOT valid proof for trackingId: " + jsonProof[0].trackingId, event);                                   
+            var hash = result.hash;
+            if (proofFromChain.publicProof.publicProof.documentHash === hash) {
+              return showMessage("Valid proof with attachment for trackingId: " + trackingId, event);
             }
 
-            if (!proofFromChain.publicProof.publicProof || !proofFromChain.publicProof.publicProof.documentHash) {
-              return showMessage("Valid proof with NO attachment for trackingId: " + jsonProof[0].trackingId, event);                                             
-            }
+            return showMessage("Valid proof BUT attachment NOT valid for trackingId: " + trackingId, event);
 
-            return getFirstAttachmentHash(function(err, result) {
-              console.log('retrieving first attachment hash:', err, result);
-              if (err) {
-                return showMessage("error retrieving first attachment hash - trackingId: " + jsonProof[0].trackingId + " error: " + err.message, event); 
-              }
-
-              var hash = result.hash;
-              if (proofFromChain.publicProof.publicProof.documentHash === hash) {
-                return showMessage("Valid proof with attachment for trackingId: " + jsonProof[0].trackingId, event);
-              } 
-
-              return showMessage("Valid proof BUT attachment NOT valid for trackingId: " + jsonProof[0].trackingId, event);
-              
-            });
           });
-        }
+        });
       }
-    }
-    catch(ex) {
-      return showMessage(ex.message, event);       
+    } catch (ex) {
+      return showMessage(ex.message, event);
     }
   });
 }
@@ -337,39 +315,39 @@ function provideProof(event) {
     var trackingId = guids[0];
     console.log('providing proof for trackingId:', trackingId);
 
-    return getProof(trackingId, function(err, response) {
+    return getProof(trackingId, function(err, getProofResponse) {
       if (err) {
         console.error('error getting proof:', err.message);
         return showMessage(err.message, event);
       }
-      
-      var proofs = response.result;
+
+      var proofs = getProofResponse.result.proofs;
       console.log('got proofs:', proofs);
 
       var attachments = [];
       for (var i in proofs) {
         var proof = proofs[i];
-        if (proof && proof.encryptedProof && proof.encryptedProof.sasToken && proof.encryptedProof.documentName) {
+        if (proof && proof.encryptedProof && proof.encryptedProof.sasUrl && proof.encryptedProof.documentName) {
           attachments.push({
-            type : Office.MailboxEnums.AttachmentType.File,
-            url : proof.encryptedProof.sasToken, 
-            name : proof.encryptedProof.documentName
+            type: Office.MailboxEnums.AttachmentType.File,
+            url: proof.encryptedProof.sasUrl,
+            name: proof.encryptedProof.documentName
           })
         }
       }
 
       console.log('attachments: ', attachments);
 
-      var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f"+ beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
-      
+      var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f" + beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
+
       var opts = {
-        'htmlBody' : replyText,
-        'attachments' : attachments
+        'htmlBody': replyText,
+        'attachments': attachments
       };
 
       console.log('creating a reply mail with ', JSON.stringify(opts, true, 2));
       Office.context.mailbox.item.displayReplyForm(opts);
-      
+
       showMessage("Proof have been added for: " + trackingId, event);
     });
   });
@@ -378,7 +356,7 @@ function provideProof(event) {
 function extractGuidsFromText(text) {
   var guidRegex = new RegExp("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}");
   var guidLength = 36;
-  
+
   var index, guids = [];
   while ((index = text.search(guidRegex)) > -1) {
     var guid = text.substr(index, guidLength);
@@ -390,12 +368,12 @@ function extractGuidsFromText(text) {
 
 
 function showMessage(message, event) {
-	Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
-		type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
-		icon: 'icon-16',
-		message: message,
-		persistent: false
-	}, function (result) {
+  Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
+    type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
+    icon: 'icon-16',
+    message: message,
+    persistent: false
+  }, function(result) {
     if (result.status === Office.AsyncResultStatus.Failed) {
       showMessage('Error showing a notification', event);
     }

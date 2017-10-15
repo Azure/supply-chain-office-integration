@@ -1,0 +1,17 @@
+{
+    "attachment": {
+
+      "post": {
+        "id": "/AttachmentPut",
+        "type": "object",
+        "properties": {
+          "ewsUrl": { "type": "string" },
+          "attachmentToken" : { "type" : "string" },
+          "attachments":{
+              "type": "array",
+              "items": {"type":"object"} }
+        },
+        "required": ["ewsUrl", "attachmentToken"]
+      }
+  }
+}
