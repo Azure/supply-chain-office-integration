@@ -12,7 +12,9 @@ Office.initialize = function() {
 console.log('loading supply-chain add-in');
 
 // TODO move to configuration retrieved from the server
-const USER_TOKEN_HEADER_KEY = 'user-token';
+const USER_ACCOUNT_HEADER_KEY = 'user-account';
+const AUTHORIZATION_HEADER_KEY = 'authorization';
+
 const beginProofString = "-----BEGIN PROOF-----";
 const endProofString = "-----END PROOF-----";
 
@@ -24,9 +26,8 @@ function httpRequest(opts, cb) {
     if (err) return cb(err);
 
     opts.headers = opts.headers || {};
-    if (!opts.headers[USER_TOKEN_HEADER_KEY]) {
-      opts.headers[USER_TOKEN_HEADER_KEY] = token;
-    }
+    opts.headers[AUTHORIZATION_HEADER_KEY] = 'bearer ' + token;
+    opts.headers[USER_ACCOUNT_HEADER_KEY] = Office.context.mailbox.userProfile.emailAddress;
 
     console.log('calling', opts.method, opts.url, opts.data ? JSON.stringify(opts.data) : '');
 
