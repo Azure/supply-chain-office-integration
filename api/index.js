@@ -126,7 +126,7 @@ function getSAS(CONTAINER_NAME, blobSvc, opts) {
   var sharedAccessPolicy = {
     AccessPolicy: {
       Start: azureStorage.date.minutesFromNow(-1),
-      Expiry: azureStorage.date.minutesFromNow(2),
+      Expiry: azureStorage.date.daysFromNow(7),
       Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ
     }
   };
