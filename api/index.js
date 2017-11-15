@@ -103,14 +103,12 @@ app.post('/attachment', async(req, res) => {
 
       if (req.body.upload) {
         await utils.callAsyncFunc(azureBlobService, 'createBlockBlobFromStream', CONTAINER_NAME, blobName, binaryStream, binaryData.length);
-        var sasToken = getSAS(CONTAINER_NAME, azureBlobService, {name: blobName});
-        var sasUrl = azureBlobService.getUrl(CONTAINER_NAME, blobName, sasToken, true);
       }
 
       attachmentProcessingDetails.push({
         name: fileName,
         hash: contentHash,
-        sasUrl: sasUrl
+        blobName: blobName
       });
     }
 
@@ -121,19 +119,6 @@ app.post('/attachment', async(req, res) => {
   }
 
 });
-
-function getSAS(CONTAINER_NAME, blobSvc, opts) {
-  var sharedAccessPolicy = {
-    AccessPolicy: {
-      Start: azureStorage.date.minutesFromNow(-1),
-      Expiry: azureStorage.date.minutesFromNow(2),
-      Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ
-    }
-  };
-  var sasToken = blobSvc.generateSharedAccessSignature(CONTAINER_NAME, opts.name, sharedAccessPolicy);
-  console.log('sasToken', sasToken);
-  return sasToken;
-}
 
 app.put('/proof', async(req, res) => {
   try {
@@ -174,6 +159,7 @@ app.get('/proof/:trackingId', async(req, res) => {
 
     try {
       var result = await request.get(path, {json: true, headers: {'user-id': req.userInfo.account}});
+      await addSasUrls(result);
     } catch (err) {
       if (err.statusCode === HttpStatus.NOT_FOUND) {
         // pass on the error we got from the services api
@@ -190,6 +176,29 @@ app.get('/proof/:trackingId', async(req, res) => {
   }
 
 });
+
+async function addSasUrls(getProofsResponse){
+  for (var i=0; i<getProofsResponse.proofs.length; i++){
+    var blobName = getProofsResponse.proofs[i].encryptedProof.blobName;
+    var sasToken = getSAS(CONTAINER_NAME, azureBlobService, blobName);
+    var sasUrl = azureBlobService.getUrl(CONTAINER_NAME, blobName, sasToken, true);
+
+    getProofsResponse.proofs[i].sasUrl = sasUrl;
+  }
+}
+
+function getSAS(CONTAINER_NAME, blobSvc, blobName) {
+  var sharedAccessPolicy = {
+    AccessPolicy: {
+      Start: azureStorage.date.minutesFromNow(-1),
+      Expiry: azureStorage.date.minutesFromNow(2),
+      Permissions: azureStorage.BlobUtilities.SharedAccessPermissions.READ
+    }
+  };
+  var sasToken = blobSvc.generateSharedAccessSignature(CONTAINER_NAME, blobName, sharedAccessPolicy);
+  console.log('sasToken', sasToken);
+  return sasToken;
+}
 
 
 app.get('/key/:keyId', async (req, res) => {
