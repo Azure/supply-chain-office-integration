@@ -137,7 +137,7 @@ function storeAttachments(event) {
         var ad = response.attachmentProcessingDetails[i];
         var proof = {
           proofToEncrypt: {
-            sasUrl: ad.sasUrl,
+            blobName: ad.blobName,
             documentName: ad.name
           },
           publicProof: {
@@ -328,19 +328,19 @@ function provideProof(event) {
       var attachments = [];
       for (var i in proofs) {
         var proof = proofs[i];
-        if (proof && proof.encryptedProof && proof.encryptedProof.sasUrl && proof.encryptedProof.documentName) {
+        if (proof && proof.encryptedProof && proof.sasUrl && proof.encryptedProof.documentName) {
           attachments.push({
             type: Office.MailboxEnums.AttachmentType.File,
-            url: proof.encryptedProof.sasUrl,
+            url: proof.sasUrl,
             name: proof.encryptedProof.documentName
-          })
+          });
+          //delete proofs[i].sasUrl;
         }
       }
 
       console.log('attachments: ', attachments);
 
       var replyText = "Please find below the requested proofs for your own validation.\r\f\r\f\r\f" + beginProofString + JSON.stringify(proofs, null, 2) + endProofString;
-
       var opts = {
         'htmlBody': replyText,
         'attachments': attachments
