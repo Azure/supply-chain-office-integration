@@ -61,14 +61,13 @@ function httpRequest(opts, cb) {
 }
 
 
-function putProof(proof, cb) {
-  console.log('adding proof:', proof);
+function putProofs(proofs, cb) {
 
   return httpRequest({
     method: 'PUT',
     contentType: "application/json; charset=utf-8",
     url: '/api/proof',
-    data: JSON.stringify(proof),
+    data: JSON.stringify(proofs),
     dataType: 'json'
   }, cb);
 }
@@ -131,11 +130,12 @@ function storeAttachments(event) {
     console.log('got response', response);
 
     var trackingIds = [];
+    var errors = [];
+    var proofsToStore = [];
     if (response.attachmentProcessingDetails) {
       for (i = 0; i < response.attachmentProcessingDetails.length; i++) {
-
         var ad = response.attachmentProcessingDetails[i];
-        var proof = {
+        proofsToStore.push({
           proofToEncrypt: {
             blobName: ad.blobName,
             documentName: ad.name
@@ -143,18 +143,30 @@ function storeAttachments(event) {
           publicProof: {
             documentHash: ad.hash
           }
-        };
-
-        return putProof(proof, function(err, response) {
-          if (err) return showMessage(err.message, event);
-
-          trackingIds.push(response.trackingId);
-
-          Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
-          return showMessage("Attachments processed: " + JSON.stringify(trackingIds), event);
         });
       }
     }
+
+    return putProofs(proofsToStore, function(err, response) {
+      if (err) return showMessage("Error: " + err.message, event)
+      else {
+        for (i = 0; i < response.length; i++){
+          var result = response[i];
+          if (result.err) {
+            errors.push(proof.proofToEncrypt.documentName + ' - ' + result.err.message);
+          } else if (result.trackingId){
+            trackingIds.push(result.trackingId);
+          }
+        }
+      }
+
+      if (trackingIds.length > 0) {
+        Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+      }
+      
+      var message = (trackingIds.length > 0 ? "Attachments processed: " + JSON.stringify(trackingIds) : "") + (errors.length > 0 ? " Errors: " + JSON.stringify(errors) : "");
+      return showMessage(message, event);
+    });
   });
 }
 
