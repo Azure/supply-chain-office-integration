@@ -288,7 +288,7 @@ function validateProof(event) {
             return showMessage("NOT valid proof for trackingId: " + trackingId, event);
           }
 
-          if (!proofFromChain.publicProof.publicProof || !proofFromChain.publicProof.publicProof.documentHash) {
+          if (!proofFromChain.publicProof || !proofFromChain.publicProof.documentHash) {
             return showMessage("Valid proof with NO attachment for trackingId: " + trackingId, event);
           }
 
@@ -299,7 +299,7 @@ function validateProof(event) {
             }
 
             var hash = result.hash;
-            if (proofFromChain.publicProof.publicProof.documentHash === hash) {
+            if (proofFromChain.publicProof.documentHash === hash) {
               return showMessage("Valid proof with attachment for trackingId: " + trackingId, event);
             }
 
