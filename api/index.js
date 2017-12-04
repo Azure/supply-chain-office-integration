@@ -122,18 +122,23 @@ app.post('/attachment', async(req, res) => {
 
 app.put('/proof', async(req, res) => {
   try {
-    req.body.userId = req.userInfo.account;
-
     var uri = iberaServicesEndpoint + `/api/proof`;
-    var result = await request({
-      method: 'PUT',
-      uri,
-      body: req.body,
-      json: true
-    });
-
-    console.log(`got response: ${util.inspect(result)}`);
-    return res.json(result);
+    var results = [];
+    if (req.body.length > 0){
+      for (var i = 0; i < req.body.length; i++){
+        req.body[i].userId = req.userInfo.account; //Add user id to the proof
+        var result = await request({
+          method: 'PUT',
+          uri,
+          body: req.body[i],
+          json: true
+        });
+        results.push(result);
+      }
+    }
+    
+    console.log(`results: ${util.inspect(results)}`);
+    return res.json(results);
   } catch (err) {
     return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({error: err.message});
   }
