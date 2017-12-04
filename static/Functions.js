@@ -145,28 +145,31 @@ function storeAttachments(event) {
           }
         });
       }
-    }
 
-    return putProofs(proofsToStore, function(err, response) {
-      if (err) return showMessage("Error: " + err.message, event)
-      else {
-        for (i = 0; i < response.length; i++){
-          var result = response[i];
-          if (result.err) {
-            errors.push(proof.proofToEncrypt.documentName + ' - ' + result.err.message);
-          } else if (result.trackingId){
-            trackingIds.push(result.trackingId);
+      return putProofs(proofsToStore, function(err, response) {
+        if (err) return showMessage("Error: " + err.message, event)
+        else {
+          for (i = 0; i < response.length; i++){
+            var result = response[i];
+            if (result.err) {
+              errors.push(proof.proofToEncrypt.documentName + ' - ' + result.err.message);
+            } else if (result.trackingId){
+              trackingIds.push(result.trackingId);
+            }
           }
         }
-      }
+  
+        if (trackingIds.length > 0) {
+          Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
+        }
+        
+        var message = (trackingIds.length > 0 ? "Attachments processed: " + JSON.stringify(trackingIds) : "No proofs were added. ") + (errors.length > 0 ? " Errors: " + JSON.stringify(errors) : "");
+        return showMessage(message, event);
+      });
 
-      if (trackingIds.length > 0) {
-        Office.context.mailbox.item.displayReplyForm(JSON.stringify(trackingIds));
-      }
-      
-      var message = (trackingIds.length > 0 ? "Attachments processed: " + JSON.stringify(trackingIds) : "") + (errors.length > 0 ? " Errors: " + JSON.stringify(errors) : "");
-      return showMessage(message, event);
-    });
+    } else {
+      return showMessage("No attachments were found", event);
+    }
   });
 }
 
