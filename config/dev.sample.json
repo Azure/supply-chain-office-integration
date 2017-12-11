@@ -1,5 +1,5 @@
 {
-  "IBERA_SERVICES_ENDPOINT": "https://...",
-  "DOCUMENT_SERVICES_ENDPOINT": "https://...",
-  "OUTLOOK_SERVICE_ENDPOINT": "https://..."
+  "SUPPLY_CHAIN_SERVICES_ENDPOINT": "https://...",
+  "OUTLOOK_SERVICE_ENDPOINT": "https://...",
+  "STORAGE_CONNECTION_STRING": "DefaultEndpointsProtocol=https;AccountName=..."
 }

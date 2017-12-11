@@ -18,7 +18,7 @@ var utils = require('../utils');
 var auth = require('../auth.js');
 var app = express();
 
-const iberaServicesEndpoint = config.IBERA_SERVICES_ENDPOINT;
+const supplyChainServicesEndpoint = config.SUPPLY_CHAIN_SERVICES_ENDPOINT;
 const azureStorageConnectionString = config.STORAGE_CONNECTION_STRING;
 
 const USER_ACCOUNT_HEADER_KEY = 'user-account';
@@ -122,7 +122,7 @@ app.post('/attachment', async(req, res) => {
 
 app.put('/proof', async(req, res) => {
   try {
-    var uri = iberaServicesEndpoint + `/api/proof`;
+    var uri = supplyChainServicesEndpoint + `/api/proof`;
     var results = [];
     if (req.body.length > 0){
       for (var i = 0; i < req.body.length; i++){
@@ -160,7 +160,7 @@ app.get('/proof/:trackingId', async(req, res) => {
 
     var decrypt = req.sanitizeQuery('decrypt').toBoolean();
 
-    var path = iberaServicesEndpoint + `/api/proof/${trackingId}?decrypt=${decrypt}`;
+    var path = supplyChainServicesEndpoint + `/api/proof/${trackingId}?decrypt=${decrypt}`;
 
     try {
       var result = await request.get(path, {json: true, headers: {'user-id': req.userInfo.account}});
@@ -222,7 +222,7 @@ app.get('/key/:keyId', async (req, res) => {
 
     var userId = req.userInfo.account;
 
-    var path = iberaServicesEndpoint + `/api/key/${keyId}?userId=${userId}`;
+    var path = supplyChainServicesEndpoint + `/api/key/${keyId}?userId=${userId}`;
     var result = await request.get(path, {json: true});
 
     console.log(`got response: ${util.inspect(result)}`);

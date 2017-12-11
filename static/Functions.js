@@ -384,7 +384,7 @@ function extractGuidsFromText(text) {
 
 
 function showMessage(message, event) {
-  Office.context.mailbox.item.notificationMessages.replaceAsync('ibera-notifications-id', {
+  Office.context.mailbox.item.notificationMessages.replaceAsync('supply-chain-notifications-id', {
     type: Office.MailboxEnums.ItemNotificationMessageType.InformationalMessage,
     icon: 'icon-16',
     message: message,

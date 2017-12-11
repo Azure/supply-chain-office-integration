@@ -45,11 +45,9 @@ To run locally, copy the file `dev.sample.json` in the `config` folder and creat
 
 Fill in the following values:
 
-`IBERA_SERVICES_ENDPOINT`: The URL for the iBera services service - the endpoint needs to support SSL
-`DOCUMENT_SERVICES_ENDPOINT`: The URL for the iBera document service - the endpoint needs to support SSL 
-When deploying to production, fill these values in the environment variables.
-
-Also in `static/client.env.js`, set `documentServiceUrl` to your local document service endpoint.
+`SUPPLY_CHAIN_SERVICES_ENDPOINT`: The URL for the supply chain services - the endpoint needs to support SSL
+`OUTLOOK_SERVICE_ENDPOINT`: The URL for the Outlook Service - the endpoint needs to support SSL
+`STORAGE_CONNECTION_STRING`: The storage connection string in Azure.
 
 
 ## Deployment
@@ -57,7 +55,7 @@ Also in `static/client.env.js`, set `documentServiceUrl` to your local document 
 Run the gulp dist task and provide the URL behind which you are deploying, for example:
 
 ```
-$ gulp dist --url https://ibera-web-app.azurewebsites.net/
+$ gulp dist --url https://supply-chain-web-app.azurewebsites.net/
 ```
 
 Above command rewrites the manifest to point to the correct resources.
@@ -71,5 +69,5 @@ $ npm install --production
 $ git init .
 $ git add *
 $ git commit -m "Deployment"
-$ git push https://ibera-web-app.scm.azurewebsites.net:443/ibera-web-app.git master
+$ git push https://supply-chain-web-app.scm.azurewebsites.net:443/supply-chain-web-app.git master
 ```

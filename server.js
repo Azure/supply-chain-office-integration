@@ -57,7 +57,7 @@ app.use((req, res, next) => {
 app.use('/api', api);
 
 app.get('/', (req, res) => {
-	return res.end(`iBera Outlook Add-In Service in on...`);
+	return res.end(`Outlook Add-In Service in on...`);
 });
 
 // hijack request for manifest file- 
