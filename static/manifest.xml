@@ -4,7 +4,7 @@
   <Version>1.0.0.0</Version>
   <ProviderName>[Provider name]</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Ibera for Outlook"/>
+  <DisplayName DefaultValue="Supply Chain solution for Outlook"/>
   <Description DefaultValue="Open and transparent supply chain by leveraging the power of the blockchain."/>
   <IconUrl DefaultValue="https://localhost:8443/images/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:8443/images/hi-res-icon.png"/>
@@ -109,7 +109,7 @@
         <bt:Url id="functionFile" DefaultValue="https://localhost:8443/Functions.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="groupLabel" DefaultValue="Ibera"/>
+        <bt:String id="groupLabel" DefaultValue="supply-chain"/>
 
         <bt:String id="funcValidateProofButtonLabel" DefaultValue="Validate Proof" />
         <bt:String id="funcValidatePSuperTipTitle" DefaultValue="Validate Proof" />
@@ -122,9 +122,9 @@
 
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="funcValidPSuperTipDescription" DefaultValue="Validate proof using Ibera service" />
-        <bt:String id="funcProvPSuperTipDescription" DefaultValue="Provide proof using Ibera service" />
-        <bt:String id="funcStoreDocSuperTipDescription" DefaultValue="Store attachments using Ibera service" />
+        <bt:String id="funcValidPSuperTipDescription" DefaultValue="Validate proof using Supply Chain service" />
+        <bt:String id="funcProvPSuperTipDescription" DefaultValue="Provide proof using Supply Chain service" />
+        <bt:String id="funcStoreDocSuperTipDescription" DefaultValue="Store attachments using Supply Chain service" />
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>

@@ -22,7 +22,7 @@ var config = {};
 
 // validate configuration
 var params = [
-  'IBERA_SERVICES_ENDPOINT',
+  'SUPPLY_CHAIN_SERVICES_ENDPOINT',
   'OUTLOOK_SERVICE_ENDPOINT',
   'STORAGE_CONNECTION_STRING'
 ];
